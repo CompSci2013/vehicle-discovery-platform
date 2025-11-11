@@ -1,0 +1,134 @@
+/*
+  APPLICATION SHELL STYLES
+
+  This file styles the main app navigation and layout structure.
+  It provides a clean, professional header with navigation links
+  and a content area for routed components.
+*/
+
+/* ============================================
+   NAVIGATION HEADER
+   ============================================ */
+
+.app-nav {
+  /* Flexbox layout for horizontal navigation */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  /* Spacing and sizing */
+  padding: 1rem 2rem;
+
+  /* Colors and shadows */
+  background-color: #1976d2;
+  color: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+  /* Position fixed at top for persistent navigation */
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+/* ============================================
+   APP TITLE / LOGO
+   ============================================ */
+
+.app-title {
+  /* Remove default margin from h1 */
+  h1 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 500;
+    color: white;
+  }
+}
+
+/* ============================================
+   NAVIGATION LINKS
+   ============================================ */
+
+.nav-links {
+  /* Flexbox layout for link arrangement */
+  display: flex;
+  gap: 2rem;
+
+  /* Individual link styling */
+  a {
+    /* Remove default link styling */
+    text-decoration: none;
+    color: rgba(255, 255, 255, 0.9);
+
+    /* Typography */
+    font-size: 1rem;
+    font-weight: 500;
+
+    /* Spacing */
+    padding: 0.5rem 1rem;
+
+    /* Border radius for rounded corners */
+    border-radius: 4px;
+
+    /* Smooth transitions for hover effects */
+    transition: all 0.3s ease;
+
+    /* Hover state */
+    &:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+      color: white;
+    }
+
+    /* Active route styling (applied by Angular's routerLinkActive) */
+    &.active {
+      background-color: rgba(255, 255, 255, 0.2);
+      color: white;
+      font-weight: 600;
+    }
+  }
+}
+
+/* ============================================
+   MAIN CONTENT AREA
+   ============================================ */
+
+.app-content {
+  /* Full viewport height minus nav height */
+  min-height: calc(100vh - 80px);
+
+  /* Padding for breathing room */
+  padding: 2rem;
+
+  /* Light background */
+  background-color: #f5f5f5;
+}
+
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================
+
+   On smaller screens, we'll stack the nav vertically
+   and reduce spacing to fit mobile devices.
+*/
+
+@media (max-width: 768px) {
+  .app-nav {
+    /* Stack vertically on mobile */
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1rem;
+  }
+
+  .nav-links {
+    /* Reduce gap on mobile */
+    gap: 1rem;
+
+    /* Allow wrapping if needed */
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .app-content {
+    /* Reduce padding on mobile */
+    padding: 1rem;
+  }
+}
