@@ -1,0 +1,36 @@
+FROM node:18-alpine
+
+# Install bash for Claude Code
+RUN apk add --no-cache bash
+
+# Install Chromium and dependencies for headless testing
+RUN apk add --no-cache \
+    chromium \
+    nss \
+    freetype \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont \
+    git
+
+# Set Chromium path for Karma
+ENV CHROME_BIN=/usr/bin/chromium-browser
+ENV CHROMIUM_BIN=/usr/bin/chromium-browser
+
+# Set SHELL for Claude Code
+ENV SHELL=/bin/bash
+
+# Set working directory
+WORKDIR /app
+
+# Install Angular CLI 14 globally (for ng new with Angular 14)
+RUN npm install -g @angular/cli@14
+
+# Install Claude Code CLI globally
+RUN npm install -g @anthropic-ai/claude-code
+
+# Expose Angular dev server port (4203 for vehicle-discovery-platform)
+EXPOSE 4203
+
+# Keep container running
+CMD ["tail", "-f", "/dev/null"]
