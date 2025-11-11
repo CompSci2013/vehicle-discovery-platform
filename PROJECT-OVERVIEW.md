@@ -431,6 +431,18 @@ The apn project uses a **URL-as-single-source-of-truth** architecture that we wi
 ### Development Container Approach
 We will use the same containerized development workflow as apn:
 
+**⚠️ CRITICAL: ALL npm and ng commands MUST run inside the dev container, NEVER on Thor server**
+
+```bash
+# ❌ WRONG: Running on Thor server
+npm install  # DON'T DO THIS
+ng generate component my-component  # DON'T DO THIS
+
+# ✅ CORRECT: Running inside dev container
+podman exec -it vehicle-discovery-platform-dev npm install
+podman exec -it vehicle-discovery-platform-dev ng generate component my-component
+```
+
 **Dev Container Configuration:**
 - **Base Image:** node:18-alpine
 - **Port:** 4203 (4200 = original AUTOS, 4201 = apn)
@@ -560,22 +572,49 @@ This project will be considered successful when:
 
 ---
 
+## Project Goals
+
+**📄 See [GOALS.md](GOALS.md) for complete requirements and desired outcomes**
+
+### Quick Summary
+
+**Goal 1: Master URL-First Architecture**
+- Understand URL as single source of truth
+- Handle "dumb" components that hydrate from URL
+- Implement "Start Wide, Go Narrow" pattern for paginated tables
+- Sync popped-out components with main window via BroadcastChannel
+
+**Goal 2: Plugin-Based Picker System**
+- Add new pickers via configuration file only (no code changes)
+- Support disparate APIs (each picker can use different endpoint)
+- Configure columns (headers, filterable, sortable, orderable, locked)
+
+**Goal 3: Configurable Results Tables**
+- Configure tables like pickers (via config file)
+- Support expandable rows with sub-tables
+- Sub-table data fetched on-demand
+
+**Goal 4: Base Table Design**
+- ✅ **Decision: Single `BaseTableComponent` with configuration**
+- No separate SimpleTable/ExpandableTable/PickerTable components
+- Picker is table configuration (selection column + apply button)
+- Expandable rows controlled by configuration
+
+---
+
 ## Next Steps
 
-### Session 1 Goals (This Session or Next)
+### Phase 1: Foundation (Current)
 1. ✅ **API Discovery** - COMPLETE (documented above)
-   - All endpoints documented
-   - Data models defined
-   - No authentication required
-
-2. **First ADRs** - Document foundational decisions
+2. ✅ **Goals Defined** - COMPLETE (see GOALS.md)
+3. **First ADRs** - Document foundational decisions
    - ADR-001: Project initialization and Angular setup
    - ADR-002: UI library selection (PrimeNG)
    - ADR-003: Development environment and workflow
-   - ADR-004: State management architecture
-   - ADR-005: Project structure and organization
+   - ADR-004: URL state management architecture (single service)
+   - ADR-005: Base table component design
 
-3. **Bootstrap Project** - Initialize Angular application
+4. **Bootstrap Project** - Initialize Angular application
    - Run `ng new` with appropriate configuration
    - Set up dev container workflow (port 4203)
    - Install necessary dependencies (PrimeNG, etc.)
