@@ -1,0 +1,273 @@
+<!--
+  BASE TABLE COMPONENT TEMPLATE
+
+  STRUCTURE:
+  1. Header (optional: selection count, buttons)
+  2. Table
+  3. Footer (optional: pagination, buttons)
+
+  MODES:
+  - Simple: Just display data
+  - Hierarchical: Parent-child grouped rows
+  - Expandable: Rows can expand to show sub-table
+  - Picker: With selection checkboxes and Apply button
+-->
+
+<div class="base-table-container">
+  <!-- HEADER: Selection info and buttons -->
+  <div
+    *ngIf="config.selection?.enabled && (config.selection.showCount || config.selection.applyButton?.position === 'header' || config.selection.applyButton?.position === 'both')"
+    class="base-table-header">
+
+    <!-- Selection count -->
+    <div *ngIf="config.selection?.showCount" class="selection-count">
+      {{ getSelectionCount() }} item<span *ngIf="getSelectionCount() !== 1">s</span> selected
+    </div>
+
+    <!-- Action buttons -->
+    <div class="action-buttons">
+      <p-button
+        *ngIf="config.selection?.clearButton"
+        label="Clear All"
+        icon="pi pi-times"
+        styleClass="p-button-secondary p-button-outlined"
+        (onClick)="onClearSelection()">
+      </p-button>
+
+      <p-button
+        *ngIf="config.selection?.applyButton?.enabled && (config.selection?.applyButton?.position === 'header' || config.selection?.applyButton?.position === 'both')"
+        [label]="config.selection?.applyButton?.text || 'Apply Selection'"
+        icon="pi pi-check"
+        [disabled]="getSelectionCount() === 0"
+        (onClick)="onApplySelection()">
+      </p-button>
+    </div>
+  </div>
+
+  <!-- LOADING STATE -->
+  <div *ngIf="loading" class="loading-container">
+    <p-progressSpinner></p-progressSpinner>
+    <p *ngIf="config.loadingMessage">{{ config.loadingMessage }}</p>
+  </div>
+
+  <!-- EMPTY STATE -->
+  <div *ngIf="!loading && data.length === 0" class="empty-state">
+    <i class="pi pi-inbox empty-icon"></i>
+    <p>{{ config.emptyMessage || 'No data available' }}</p>
+  </div>
+
+  <!-- TABLE: HIERARCHICAL MODE (parent-child grouped) -->
+  <div *ngIf="!loading && data.length > 0 && config.selection?.hierarchical?.enabled" class="table-wrapper">
+    <p-table
+      [value]="[]"
+      [styleClass]="'p-datatable-sm'">
+
+      <!-- HEADER -->
+      <ng-template pTemplate="header">
+        <tr>
+          <!-- Expand column (if expandable) -->
+          <th *ngIf="config.expandable?.enabled" style="width: 50px"></th>
+
+          <!-- Checkbox column (if selection enabled) -->
+          <th *ngIf="config.selection?.enabled" style="width: 50px">
+            <p-checkbox
+              *ngIf="config.selection.mode === 'multi'"
+              binary="true"
+              [disabled]="true">
+            </p-checkbox>
+          </th>
+
+          <!-- Data columns -->
+          <th *ngFor="let col of getVisibleColumns()" [ngStyle]="{'width': col.width}">
+            {{ col.label }}
+          </th>
+        </tr>
+      </ng-template>
+
+      <!-- BODY: Hierarchical rendering -->
+      <ng-template pTemplate="body">
+        <!-- Loop through unique parents -->
+        <ng-container *ngFor="let parentValue of getUniqueParents()">
+          <!-- Parent row (if there are multiple parents, otherwise skip parent row) -->
+          <tr *ngIf="getUniqueParents().length > 1" class="parent-row">
+            <!-- Expand column -->
+            <td *ngIf="config.expandable?.enabled"></td>
+
+            <!-- Parent checkbox (tri-state) -->
+            <td *ngIf="config.selection?.enabled">
+              <p-checkbox
+                [ngModel]="getParentCheckboxValue(parentValue)"
+                [binary]="false"
+                (onChange)="onParentCheckboxChange(parentValue, $event)">
+              </p-checkbox>
+            </td>
+
+            <!-- Parent value in first data column -->
+            <td [attr.colspan]="getVisibleColumns().length" class="parent-cell">
+              <strong>{{ parentValue }}</strong>
+            </td>
+          </tr>
+
+          <!-- Child rows -->
+          <tr *ngFor="let row of getChildrenForParent(parentValue)" class="child-row">
+            <!-- Expand column -->
+            <td *ngIf="config.expandable?.enabled">
+              <button
+                pButton
+                [icon]="isRowExpanded(row) ? (config.expandable?.collapseIcon || 'pi pi-chevron-down') : (config.expandable?.expandIcon || 'pi pi-chevron-right')"
+                class="p-button-text p-button-sm"
+                (click)="toggleRowExpansion(row)">
+              </button>
+            </td>
+
+            <!-- Child checkbox -->
+            <td *ngIf="config.selection?.enabled">
+              <p-checkbox
+                [ngModel]="isRowSelected(row)"
+                [binary]="true"
+                (onChange)="onChildCheckboxChange(row, $event)">
+              </p-checkbox>
+            </td>
+
+            <!-- Data columns -->
+            <td *ngFor="let col of getVisibleColumns()">
+              {{ row[col.key] }}
+            </td>
+          </tr>
+
+          <!-- Expanded sub-table row -->
+          <tr *ngIf="isRowExpanded(row) && config.expandable?.enabled" class="expanded-row">
+            <td [attr.colspan]="getVisibleColumns().length + 2">
+              <div class="sub-table-container">
+                <!-- Sub-table (recursive BaseTable) -->
+                <app-base-table
+                  *ngIf="config.expandable.subTable"
+                  [config]="{
+                    id: config.id + '-sub',
+                    columns: config.expandable.subTable.columns,
+                    data: getSubTableData(row),
+                    striped: true,
+                    size: 'small'
+                  }">
+                </app-base-table>
+              </div>
+            </td>
+          </tr>
+        </ng-container>
+      </ng-template>
+    </p-table>
+  </div>
+
+  <!-- TABLE: SIMPLE MODE (flat data, no hierarchy) -->
+  <div *ngIf="!loading && data.length > 0 && !config.selection?.hierarchical?.enabled" class="table-wrapper">
+    <p-table
+      [value]="data"
+      [lazy]="!!config.api"
+      [paginator]="config.pagination?.enabled"
+      [rows]="rows"
+      [totalRecords]="totalRecords"
+      [first]="first"
+      [rowsPerPageOptions]="config.pagination?.pageSizeOptions || [10, 20, 50, 100]"
+      [styleClass]="'p-datatable-' + (config.size || 'normal')"
+      [striped]="config.striped"
+      [showGridlines]="config.bordered"
+      (onPage)="onPageChange($event)">
+
+      <!-- HEADER -->
+      <ng-template pTemplate="header">
+        <tr>
+          <!-- Expand column (if expandable) -->
+          <th *ngIf="config.expandable?.enabled" style="width: 50px"></th>
+
+          <!-- Checkbox column (if selection enabled) -->
+          <th *ngIf="config.selection?.enabled" style="width: 50px">
+            <p-checkbox
+              *ngIf="config.selection.mode === 'multi'"
+              binary="true"
+              [disabled]="true">
+            </p-checkbox>
+          </th>
+
+          <!-- Data columns -->
+          <th *ngFor="let col of getVisibleColumns()" [ngStyle]="{'width': col.width}">
+            {{ col.label }}
+          </th>
+        </tr>
+      </ng-template>
+
+      <!-- BODY -->
+      <ng-template pTemplate="body" let-row>
+        <tr>
+          <!-- Expand column -->
+          <td *ngIf="config.expandable?.enabled">
+            <button
+              pButton
+              [icon]="isRowExpanded(row) ? (config.expandable.collapseIcon || 'pi pi-chevron-down') : (config.expandable.expandIcon || 'pi pi-chevron-right')"
+              class="p-button-text p-button-sm"
+              (click)="toggleRowExpansion(row)">
+            </button>
+          </td>
+
+          <!-- Checkbox -->
+          <td *ngIf="config.selection?.enabled">
+            <p-checkbox
+              [(ngModel)]="selectedRows"
+              [value]="row"
+              binary="true">
+            </p-checkbox>
+          </td>
+
+          <!-- Data columns -->
+          <td *ngFor="let col of getVisibleColumns()">
+            {{ row[col.key] }}
+          </td>
+        </tr>
+
+        <!-- Expanded sub-table row -->
+        <tr *ngIf="isRowExpanded(row) && config.expandable?.enabled">
+          <td [attr.colspan]="getVisibleColumns().length + (config.selection?.enabled ? 1 : 0) + (config.expandable?.enabled ? 1 : 0)">
+            <div class="sub-table-container">
+              <!-- Sub-table (recursive BaseTable) -->
+              <app-base-table
+                *ngIf="config.expandable.subTable"
+                [config]="{
+                  id: config.id + '-sub',
+                  columns: config.expandable.subTable.columns,
+                  data: getSubTableData(row),
+                  striped: true,
+                  size: 'small'
+                }">
+              </app-base-table>
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </div>
+
+  <!-- FOOTER: Pagination and buttons -->
+  <div
+    *ngIf="config.selection?.enabled && config.selection.applyButton?.enabled && (config.selection.applyButton.position === 'footer' || config.selection.applyButton.position === 'both')"
+    class="base-table-footer">
+
+    <!-- Action buttons -->
+    <div class="action-buttons">
+      <p-button
+        *ngIf="config.selection.clearButton"
+        label="Clear All"
+        icon="pi pi-times"
+        [outlined]="true"
+        severity="secondary"
+        (onClick)="onClearSelection()">
+      </p-button>
+
+      <p-button
+        [label]="config.selection.applyButton.text || 'Apply Selection'"
+        icon="pi pi-check"
+        severity="primary"
+        [disabled]="getSelectionCount() === 0"
+        (onClick)="onApplySelection()">
+      </p-button>
+    </div>
+  </div>
+</div>

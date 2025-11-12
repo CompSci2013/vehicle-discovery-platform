@@ -5,6 +5,7 @@ import { RouterModule, Routes } from '@angular/router';
 import { HomeComponent } from './features/home/home.component';
 import { SearchComponent } from './features/search/search.component';
 import { WorkshopComponent } from './features/workshop/workshop.component';
+import { DemoComponent } from './features/demo/demo.component';
 
 /**
  * APPLICATION ROUTING CONFIGURATION
@@ -139,6 +140,24 @@ const routes: Routes = [
   {
     path: 'workshop',
     component: WorkshopComponent  // Drag-and-drop customizable workspace
+  },
+
+  /**
+   * DEMO ROUTE
+   *
+   * Path: 'demo'
+   * URL: http://example.com/demo
+   *
+   * Development testing page for BaseTableComponent with demo data:
+   * - Manufacturer-Model picker with hierarchical checkboxes
+   * - Uses DemoApiService (mock data, no backend required)
+   * - Validates BaseTableComponent configuration-driven architecture
+   *
+   * Purpose: Testing and development only (will be removed in production)
+   */
+  {
+    path: 'demo',
+    component: DemoComponent  // Demo page for BaseTableComponent testing
   },
 
   /**

@@ -1,0 +1,256 @@
+/*
+  BASE TABLE COMPONENT STYLES
+
+  STRUCTURE:
+  - Container layout
+  - Header and footer styling
+  - Hierarchical row styling (parent/child)
+  - Loading and empty states
+  - Sub-table styling
+*/
+
+.base-table-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+// HEADER
+.base-table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background-color: var(--surface-50);
+  border: 1px solid var(--surface-200);
+  border-radius: var(--border-radius);
+
+  .selection-count {
+    font-size: 0.875rem;
+    color: var(--text-color-secondary);
+    font-weight: 500;
+  }
+
+  .action-buttons {
+    display: flex;
+    gap: 0.5rem;
+  }
+}
+
+// FOOTER
+.base-table-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background-color: var(--surface-50);
+  border: 1px solid var(--surface-200);
+  border-radius: var(--border-radius);
+
+  .action-buttons {
+    display: flex;
+    gap: 0.5rem;
+  }
+}
+
+// LOADING STATE
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1rem;
+  gap: 1rem;
+
+  p {
+    color: var(--text-color-secondary);
+    margin: 0;
+  }
+}
+
+// EMPTY STATE
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1rem;
+  gap: 1rem;
+  color: var(--text-color-secondary);
+
+  .empty-icon {
+    font-size: 3rem;
+    opacity: 0.3;
+  }
+
+  p {
+    margin: 0;
+    font-size: 1rem;
+  }
+}
+
+// TABLE WRAPPER
+.table-wrapper {
+  // Ensure table takes full width
+  ::ng-deep .p-datatable {
+    .p-datatable-wrapper {
+      overflow-x: auto;
+    }
+  }
+
+  // Hierarchical table styling
+  .hierarchical-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--font-family);
+
+    thead {
+      background-color: var(--surface-100);
+
+      th {
+        padding: 0.75rem 1rem;
+        text-align: left;
+        font-weight: 600;
+        border-bottom: 2px solid var(--surface-300);
+      }
+    }
+
+    tbody {
+      tr {
+        border-bottom: 1px solid var(--surface-200);
+
+        td {
+          padding: 0.75rem 1rem;
+        }
+
+        &:hover {
+          background-color: var(--surface-50);
+        }
+      }
+    }
+  }
+}
+
+// HIERARCHICAL ROWS
+::ng-deep .p-datatable {
+  // Parent row styling
+  .parent-row {
+    background-color: var(--surface-100);
+    font-weight: 600;
+
+    &:hover {
+      background-color: var(--surface-200) !important;
+    }
+
+    .parent-cell {
+      padding-left: 1rem;
+    }
+  }
+
+  // Child row styling
+  .child-row {
+    td {
+      padding-left: 2rem; // Indent children
+    }
+
+    &:hover {
+      background-color: var(--surface-50);
+    }
+  }
+
+  // Expanded row styling
+  .expanded-row {
+    background-color: var(--surface-0);
+
+    td {
+      padding: 0;
+    }
+
+    .sub-table-container {
+      padding: 1rem;
+      background-color: var(--surface-50);
+      border-top: 2px solid var(--surface-200);
+      border-bottom: 2px solid var(--surface-200);
+    }
+  }
+}
+
+// CHECKBOX STYLING
+::ng-deep .p-checkbox {
+  .p-checkbox-box {
+    width: 20px;
+    height: 20px;
+
+    .p-checkbox-icon {
+      font-size: 14px;
+    }
+  }
+}
+
+// PARENT CHECKBOX INDETERMINATE STATE
+// PrimeNG doesn't support [indeterminate] input, so we use CSS
+.parent-checkbox-wrapper {
+  display: inline-block;
+  margin-right: 8px;
+
+  ::ng-deep {
+    // Checkbox label spacing
+    .p-checkbox-label {
+      margin-left: 0.5rem;
+    }
+  }
+
+  // Indeterminate state visual styling (minus icon)
+  &.indeterminate ::ng-deep {
+    .p-checkbox .p-checkbox-box {
+      background-color: var(--primary-color) !important;
+      border-color: var(--primary-color) !important;
+
+      // Create horizontal minus line
+      &::after {
+        content: '' !important;
+        position: absolute !important;
+        width: 60% !important;
+        height: 2px !important;
+        background-color: white !important;
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        display: block !important;
+      }
+    }
+
+    // Hide the checkmark icon when indeterminate
+    .p-checkbox .p-checkbox-box .p-checkbox-icon {
+      display: none !important;
+    }
+  }
+}
+
+// INLINE CHECKBOX (for child checkboxes in dual mode)
+.checkbox-inline {
+  display: inline-block;
+  margin-right: 8px;
+}
+
+// RESPONSIVE DESIGN
+@media (max-width: 768px) {
+  .base-table-header,
+  .base-table-footer {
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: stretch;
+
+    .action-buttons {
+      justify-content: flex-end;
+    }
+  }
+
+  ::ng-deep .p-datatable {
+    font-size: 0.875rem;
+
+    .child-row td {
+      padding-left: 1rem; // Less indent on mobile
+    }
+  }
+}

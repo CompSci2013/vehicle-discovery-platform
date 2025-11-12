@@ -1,0 +1,111 @@
+<!--
+  DEMO PAGE TEMPLATE
+
+  PURPOSE:
+  Testing page for BaseTableComponent with hierarchical checkbox selection.
+  Uses demo data to validate configuration-driven architecture.
+-->
+
+<div class="demo-container">
+  <!-- Page Header -->
+  <div class="demo-header">
+    <h1>BaseTableComponent Demo</h1>
+    <p class="subtitle">Configuration-Driven Hierarchical Picker</p>
+  </div>
+
+  <!-- Demo Info Card -->
+  <p-card header="Demo Information" styleClass="demo-info-card">
+    <p><strong>Purpose:</strong> Test BaseTableComponent with TWO different picker modes</p>
+    <p><strong>Data Source:</strong> DemoApiService (mock data, no backend required)</p>
+    <p><strong>Modes Demonstrated:</strong></p>
+    <ul>
+      <li><strong>Single Checkbox Mode:</strong> One selection column (left side) with parent/child grouping</li>
+      <li><strong>Dual Checkbox Mode:</strong> Two checkboxes embedded in data columns (manufacturer + model pattern)</li>
+    </ul>
+    <p><strong>Features:</strong></p>
+    <ul>
+      <li>Hierarchical checkbox selection (parent-child pattern)</li>
+      <li>Tri-state parent checkboxes (unchecked / indeterminate / checked)</li>
+      <li>Parent state derived from children (automatic calculation)</li>
+      <li>Selection events (selectionChange, applySelection)</li>
+      <li>Configuration-driven architecture (one component, multiple configs)</li>
+    </ul>
+  </p-card>
+
+  <!-- SINGLE CHECKBOX MODE -->
+  <p-card header="Single Checkbox Mode" [subheader]="'One selection column (left side)'" styleClass="picker-card">
+    <p-panel header="Instructions" [collapsed]="true" [toggleable]="true">
+      <ol>
+        <li>Click the <strong>selection checkbox</strong> on the left to expand/collapse manufacturers</li>
+        <li>Click a <strong>parent row checkbox</strong> to select/deselect all models for that manufacturer</li>
+        <li>Click a <strong>child row checkbox</strong> to select/deselect individual models</li>
+        <li>Watch parent checkbox state update automatically (tri-state)</li>
+      </ol>
+    </p-panel>
+
+    <div *ngIf="selectionCountSingle > 0" class="selection-summary">
+      <strong>{{ selectionCountSingle }}</strong> {{ selectionCountSingle === 1 ? 'model' : 'models' }} selected
+    </div>
+
+    <app-base-table
+      *ngIf="pickerConfigSingle"
+      [config]="pickerConfigSingle"
+      [initialSelection]="initialSelectionSingle"
+      (selectionChange)="onSelectionChangeSingle($event)"
+      (selectionApply)="onApplySelectionSingle($event)">
+    </app-base-table>
+
+    <div *ngIf="!pickerConfigSingle" class="loading-placeholder">
+      <p-progressSpinner></p-progressSpinner>
+      <p>Loading single mode picker...</p>
+    </div>
+  </p-card>
+
+  <!-- DUAL CHECKBOX MODE -->
+  <p-card header="Dual Checkbox Mode" [subheader]="'Two checkboxes embedded in data columns'" styleClass="picker-card">
+    <p-panel header="Instructions" [collapsed]="true" [toggleable]="true">
+      <ol>
+        <li>Each row shows <strong>two checkboxes</strong>: manufacturer (tri-state) and model (binary)</li>
+        <li>Click <strong>manufacturer checkbox</strong> to select/deselect all models for that manufacturer</li>
+        <li>Click <strong>model checkbox</strong> to select/deselect that specific model</li>
+        <li>Manufacturer checkbox shows tri-state based on selected models</li>
+        <li>This pattern matches the original PICKER-CHECKBOX-BEHAVIOR.md specification</li>
+      </ol>
+    </p-panel>
+
+    <div *ngIf="selectionCountDual > 0" class="selection-summary">
+      <strong>{{ selectionCountDual }}</strong> {{ selectionCountDual === 1 ? 'model' : 'models' }} selected
+    </div>
+
+    <app-base-table
+      *ngIf="pickerConfigDual"
+      [config]="pickerConfigDual"
+      [initialSelection]="initialSelectionDual"
+      (selectionChange)="onSelectionChangeDual($event)"
+      (selectionApply)="onApplySelectionDual($event)">
+    </app-base-table>
+
+    <div *ngIf="!pickerConfigDual" class="loading-placeholder">
+      <p-progressSpinner></p-progressSpinner>
+      <p>Loading dual mode picker...</p>
+    </div>
+  </p-card>
+
+  <!-- Debug Info (Collapsible) -->
+  <p-panel header="Debug Information" [collapsed]="true" [toggleable]="true" styleClass="debug-panel">
+    <h4>Single Mode Selection State</h4>
+    <pre>{{ { selectedKeys: Array.from(selectedKeysSingle), selectedItems: selectedItemsSingle, selectionCount: selectionCountSingle } | json }}</pre>
+
+    <h4>Dual Mode Selection State</h4>
+    <pre>{{ { selectedKeys: Array.from(selectedKeysDual), selectedItems: selectedItemsDual, selectionCount: selectionCountDual } | json }}</pre>
+
+    <h4>Single Mode Configuration</h4>
+    <pre>{{ pickerConfigSingle | json }}</pre>
+
+    <h4>Dual Mode Configuration</h4>
+    <pre>{{ pickerConfigDual | json }}</pre>
+
+    <h4>Data (First 5 rows)</h4>
+    <pre>{{ manufacturerModelData.slice(0, 5) | json }}</pre>
+  </p-panel>
+</div>

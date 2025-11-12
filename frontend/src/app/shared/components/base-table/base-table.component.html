@@ -1,0 +1,173 @@
+<!--
+  BASE TABLE COMPONENT TEMPLATE
+  Simplified working version
+-->
+
+<div class="base-table-container">
+  <!-- HEADER: Selection info and buttons -->
+  <div
+    *ngIf="config.selection?.enabled && config.selection?.showCount"
+    class="base-table-header">
+
+    <!-- Selection count -->
+    <div class="selection-count">
+      {{ getSelectionCount() }} item<span *ngIf="getSelectionCount() !== 1">s</span> selected
+    </div>
+
+    <!-- Action buttons -->
+    <div class="action-buttons">
+      <p-button
+        *ngIf="config.selection?.clearButton"
+        label="Clear All"
+        icon="pi pi-times"
+        styleClass="p-button-secondary p-button-outlined"
+        (onClick)="onClearSelection()">
+      </p-button>
+
+      <p-button
+        *ngIf="config.selection?.applyButton?.enabled"
+        [label]="config.selection?.applyButton?.text || 'Apply Selection'"
+        icon="pi pi-check"
+        [disabled]="getSelectionCount() === 0"
+        (onClick)="onApplySelection()">
+      </p-button>
+    </div>
+  </div>
+
+  <!-- LOADING STATE -->
+  <div *ngIf="loading" class="loading-container">
+    <p-progressSpinner></p-progressSpinner>
+    <p *ngIf="config.loadingMessage">{{ config.loadingMessage }}</p>
+  </div>
+
+  <!-- EMPTY STATE -->
+  <div *ngIf="!loading && data.length === 0" class="empty-state">
+    <i class="pi pi-inbox empty-icon"></i>
+    <p>{{ config.emptyMessage || 'No data available' }}</p>
+  </div>
+
+  <!-- TABLE: HIERARCHICAL MODE - SINGLE CHECKBOX DISPLAY -->
+  <div *ngIf="!loading && data.length > 0 && config.selection?.hierarchical?.enabled && config.selection?.displayMode === 'single'" class="table-wrapper">
+    <table class="hierarchical-table">
+      <!-- HEADER -->
+      <thead>
+        <tr>
+          <th style="width: 50px"></th>
+          <th *ngFor="let col of getVisibleColumns()">{{ col.label }}</th>
+        </tr>
+      </thead>
+
+      <!-- BODY: Separate checkbox column on left, then all data columns -->
+      <tbody>
+        <tr *ngFor="let row of data" class="data-row">
+          <!-- Separate checkbox column (left side) -->
+          <td>
+            <p-checkbox
+              [ngModel]="isRowSelected(row)"
+              [binary]="true"
+              (onChange)="onChildCheckboxChange(row, $event)">
+            </p-checkbox>
+          </td>
+          <!-- Data columns -->
+          <td *ngFor="let col of getVisibleColumns()">
+            {{ row[col.key] }}
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- TABLE: HIERARCHICAL MODE - DUAL CHECKBOX DISPLAY -->
+  <div *ngIf="!loading && data.length > 0 && config.selection?.hierarchical?.enabled && config.selection?.displayMode === 'dual'" class="table-wrapper">
+    <table class="hierarchical-table">
+      <!-- HEADER -->
+      <thead>
+        <tr>
+          <th *ngFor="let col of getVisibleColumns(); let i = index">
+            {{ col.label }}
+          </th>
+        </tr>
+      </thead>
+
+      <!-- BODY: Each row shows all data columns with embedded checkboxes -->
+      <tbody>
+        <tr *ngFor="let row of data" class="data-row">
+          <td *ngFor="let col of getVisibleColumns(); let colIndex = index">
+            <!-- Parent checkbox embedded in parent column (with indeterminate wrapper) -->
+            <ng-container *ngIf="colIndex === config.selection?.hierarchical?.parentColumn">
+              <div class="parent-checkbox-wrapper"
+                   [class.indeterminate]="getCachedParentState(row[config.selection?.hierarchical?.parentKey || '']) === 'indeterminate'">
+                <p-checkbox
+                  [ngModel]="getCachedParentState(row[config.selection?.hierarchical?.parentKey || '']) === 'checked'"
+                  [binary]="true"
+                  (onChange)="onParentCheckboxChange(row[config.selection?.hierarchical?.parentKey || ''], $event)">
+                </p-checkbox>
+              </div>
+            </ng-container>
+            <!-- Child checkbox embedded in child column -->
+            <ng-container *ngIf="colIndex === config.selection?.hierarchical?.childColumn">
+              <p-checkbox
+                [ngModel]="isRowSelected(row)"
+                [binary]="true"
+                (onChange)="onChildCheckboxChange(row, $event)"
+                class="checkbox-inline">
+              </p-checkbox>
+            </ng-container>
+            <!-- Column value -->
+            {{ row[col.key] }}
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- TABLE: SIMPLE MODE -->
+  <div *ngIf="!loading && data.length > 0 && !config.selection?.hierarchical?.enabled" class="table-wrapper">
+    <p-table
+      [value]="data"
+      [paginator]="config.pagination?.enabled || false"
+      [rows]="rows"
+      [totalRecords]="totalRecords"
+      [first]="first"
+      [rowsPerPageOptions]="config.pagination?.pageSizeOptions || [10, 20, 50, 100]"
+      styleClass="p-datatable-sm"
+      (onPage)="onPageChange($event)">
+
+      <!-- HEADER -->
+      <ng-template pTemplate="header">
+        <tr>
+          <th *ngFor="let col of getVisibleColumns()">{{ col.label }}</th>
+        </tr>
+      </ng-template>
+
+      <!-- BODY -->
+      <ng-template pTemplate="body" let-row>
+        <tr>
+          <td *ngFor="let col of getVisibleColumns()">{{ row[col.key] }}</td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </div>
+
+  <!-- FOOTER -->
+  <div
+    *ngIf="config.selection?.enabled && config.selection?.applyButton?.enabled"
+    class="base-table-footer">
+    <div class="action-buttons">
+      <p-button
+        *ngIf="config.selection?.clearButton"
+        label="Clear All"
+        icon="pi pi-times"
+        styleClass="p-button-secondary p-button-outlined"
+        (onClick)="onClearSelection()">
+      </p-button>
+
+      <p-button
+        [label]="config.selection?.applyButton?.text || 'Apply Selection'"
+        icon="pi pi-check"
+        [disabled]="getSelectionCount() === 0"
+        (onClick)="onApplySelection()">
+      </p-button>
+    </div>
+  </div>
+</div>
