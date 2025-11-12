@@ -65,6 +65,13 @@ export class BaseTableComponent implements OnInit, OnChanges, OnDestroy {
   // Maps parentValue -> CheckboxState ('checked' | 'indeterminate' | 'unchecked')
   parentCheckboxStates = new Map<string, CheckboxState>();
 
+  // Sorting
+  sortField?: string;                           // Current sort column
+  sortOrder: 'asc' | 'desc' = 'asc';           // Sort direction
+
+  // Filtering
+  activeFilters: Record<string, string> = {};  // Column key -> filter value
+
   // Expandable rows
   expandedRows: Set<any> = new Set();
   subTableData: Map<any, any[]> = new Map();  // Cache for sub-table data
@@ -439,10 +446,165 @@ export class BaseTableComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   /**
+   * SORTING: Toggle sort on column
+   * Clicking same column reverses direction, clicking different column sorts ascending
+   */
+  onSortColumn(column: TableColumn): void {
+    if (!column.sortable) {
+      return;
+    }
+
+    console.log('[BaseTable] Sort column:', column.key);
+
+    if (this.sortField === column.key) {
+      // Same column: toggle direction
+      this.sortOrder = this.sortOrder === 'asc' ? 'desc' : 'asc';
+    } else {
+      // Different column: reset to ascending
+      this.sortField = column.key;
+      this.sortOrder = 'asc';
+    }
+
+    // Apply sort to data
+    this.applyDataTransformations();
+  }
+
+  /**
+   * FILTERING: Update filter for column
+   */
+  onFilterColumn(column: TableColumn, event: any): void {
+    if (!column.filterable) {
+      return;
+    }
+
+    const value = event.target?.value || '';
+    console.log('[BaseTable] Filter column:', column.key, 'value:', value);
+
+    if (value && value.trim()) {
+      this.activeFilters[column.key] = value.toLowerCase();
+    } else {
+      delete this.activeFilters[column.key];
+    }
+
+    // Apply filters to data
+    this.applyDataTransformations();
+  }
+
+  /**
+   * FILTERING: Clear all filters
+   */
+  clearAllFilters(): void {
+    console.log('[BaseTable] Clearing all filters');
+    this.activeFilters = {};
+    this.applyDataTransformations();
+  }
+
+  /**
+   * Apply sorting and filtering to data
+   * Sorts data by sortField, then applies all active filters
+   */
+  private applyDataTransformations(): void {
+    if (!this.config.data) {
+      return;
+    }
+
+    // Start with original data
+    let transformed = [...this.config.data];
+
+    // Apply filters
+    if (Object.keys(this.activeFilters).length > 0) {
+      transformed = transformed.filter(row => {
+        for (const [colKey, filterValue] of Object.entries(this.activeFilters)) {
+          const rowValue = String(row[colKey] || '').toLowerCase();
+          if (!rowValue.includes(filterValue)) {
+            return false;
+          }
+        }
+        return true;
+      });
+    }
+
+    // Apply sorting
+    if (this.sortField) {
+      transformed.sort((a, b) => {
+        const aVal = a[this.sortField!];
+        const bVal = b[this.sortField!];
+
+        // Handle null/undefined
+        if (aVal == null && bVal == null) return 0;
+        if (aVal == null) return 1;
+        if (bVal == null) return -1;
+
+        // Compare values
+        let comparison = 0;
+        if (typeof aVal === 'string') {
+          comparison = aVal.localeCompare(bVal);
+        } else if (typeof aVal === 'number') {
+          comparison = aVal - bVal;
+        } else if (aVal instanceof Date && bVal instanceof Date) {
+          comparison = aVal.getTime() - bVal.getTime();
+        } else {
+          comparison = String(aVal).localeCompare(String(bVal));
+        }
+
+        return this.sortOrder === 'asc' ? comparison : -comparison;
+      });
+    }
+
+    // Update data and total records
+    this.data = transformed;
+    this.totalRecords = transformed.length;
+  }
+
+  /**
+   * UTILITY: Check if column is sortable
+   */
+  isColumnSortable(column: TableColumn): boolean {
+    return column.sortable === true;
+  }
+
+  /**
+   * UTILITY: Check if column is filterable
+   */
+  isColumnFilterable(column: TableColumn): boolean {
+    return column.filterable === true;
+  }
+
+  /**
+   * UTILITY: Get sort icon for column
+   */
+  getSortIcon(column: TableColumn): string {
+    if (!this.isColumnSortable(column)) {
+      return '';
+    }
+
+    if (this.sortField !== column.key) {
+      return 'pi pi-sort';
+    }
+
+    return this.sortOrder === 'asc' ? 'pi pi-sort-up' : 'pi pi-sort-down';
+  }
+
+  /**
    * UTILITY: Get visible columns
    */
   getVisibleColumns(): TableColumn[] {
     return this.config.columns.filter(col => col.visible !== false);
+  }
+
+  /**
+   * UTILITY: Check if any column is filterable
+   */
+  hasFilterableColumns(): boolean {
+    return this.getVisibleColumns().some(col => col.filterable === true);
+  }
+
+  /**
+   * UTILITY: Get filter keys
+   * (Used in templates instead of Object.keys)
+   */
+  getFilterKeys(): string[] {
+    return Object.keys(this.activeFilters);
   }
 
   /**

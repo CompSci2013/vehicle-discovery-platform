@@ -89,6 +89,64 @@
   }
 }
 
+// FILTER ROW
+.filter-row {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background-color: var(--surface-50);
+  border: 1px solid var(--surface-200);
+  border-bottom: none;
+  border-radius: var(--border-radius) var(--border-radius) 0 0;
+  flex-wrap: wrap;
+  align-items: center;
+
+  .filter-cell {
+    flex: 1;
+    min-width: 150px;
+
+    .filter-input {
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.875rem;
+      border: 1px solid var(--surface-300);
+      border-radius: var(--border-radius);
+      background-color: white;
+      transition: border-color 0.2s, box-shadow 0.2s;
+
+      &:focus {
+        outline: none;
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(var(--primary-color-rgb), 0.1);
+      }
+
+      &::placeholder {
+        color: var(--text-color-secondary);
+      }
+    }
+  }
+
+  .clear-filters-btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    background-color: var(--surface-200);
+    color: var(--text-color);
+    border: none;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: background-color 0.2s;
+    white-space: nowrap;
+
+    &:hover {
+      background-color: var(--surface-300);
+    }
+
+    &:active {
+      background-color: var(--surface-400);
+    }
+  }
+}
+
 // TABLE WRAPPER
 .table-wrapper {
   // Ensure table takes full width
@@ -112,6 +170,37 @@
         text-align: left;
         font-weight: 600;
         border-bottom: 2px solid var(--surface-300);
+        cursor: auto;
+        user-select: none;
+
+        // Sortable column styling
+        &.sortable {
+          cursor: pointer;
+          transition: background-color 0.2s;
+
+          &:hover {
+            background-color: var(--surface-200);
+          }
+        }
+
+        // Column header with sort icon
+        .column-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 0.5rem;
+
+          span {
+            flex: 1;
+          }
+
+          i {
+            flex-shrink: 0;
+            color: var(--text-color-secondary);
+            font-size: 0.875rem;
+            opacity: 0.7;
+          }
+        }
       }
     }
 

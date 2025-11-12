@@ -48,12 +48,36 @@
 
   <!-- TABLE: HIERARCHICAL MODE - SINGLE CHECKBOX DISPLAY -->
   <div *ngIf="!loading && data.length > 0 && config.selection?.hierarchical?.enabled && config.selection?.displayMode === 'single'" class="table-wrapper">
+    <!-- FILTER ROW (if any column is filterable) -->
+    <div *ngIf="hasFilterableColumns()" class="filter-row">
+      <div class="filter-cell" style="width: 50px"></div>
+      <div *ngFor="let col of getVisibleColumns()" class="filter-cell">
+        <input
+          *ngIf="col.filterable"
+          type="text"
+          class="filter-input"
+          [placeholder]="'Filter ' + col.label"
+          (input)="onFilterColumn(col, $event)"
+          [value]="activeFilters[col.key] || ''">
+      </div>
+      <button *ngIf="getFilterKeys().length > 0" class="clear-filters-btn" (click)="clearAllFilters()">
+        Clear Filters
+      </button>
+    </div>
+
     <table class="hierarchical-table">
       <!-- HEADER -->
       <thead>
         <tr>
           <th style="width: 50px"></th>
-          <th *ngFor="let col of getVisibleColumns()">{{ col.label }}</th>
+          <th *ngFor="let col of getVisibleColumns()"
+              [class.sortable]="col.sortable"
+              (click)="onSortColumn(col)">
+            <div class="column-header">
+              <span>{{ col.label }}</span>
+              <i *ngIf="col.sortable" [class]="getSortIcon(col)"></i>
+            </div>
+          </th>
         </tr>
       </thead>
 
@@ -79,12 +103,33 @@
 
   <!-- TABLE: HIERARCHICAL MODE - DUAL CHECKBOX DISPLAY -->
   <div *ngIf="!loading && data.length > 0 && config.selection?.hierarchical?.enabled && config.selection?.displayMode === 'dual'" class="table-wrapper">
+    <!-- FILTER ROW (if any column is filterable) -->
+    <div *ngIf="hasFilterableColumns()" class="filter-row">
+      <div *ngFor="let col of getVisibleColumns()" class="filter-cell">
+        <input
+          *ngIf="col.filterable"
+          type="text"
+          class="filter-input"
+          [placeholder]="'Filter ' + col.label"
+          (input)="onFilterColumn(col, $event)"
+          [value]="activeFilters[col.key] || ''">
+      </div>
+      <button *ngIf="getFilterKeys().length > 0" class="clear-filters-btn" (click)="clearAllFilters()">
+        Clear Filters
+      </button>
+    </div>
+
     <table class="hierarchical-table">
       <!-- HEADER -->
       <thead>
         <tr>
-          <th *ngFor="let col of getVisibleColumns(); let i = index">
-            {{ col.label }}
+          <th *ngFor="let col of getVisibleColumns(); let i = index"
+              [class.sortable]="col.sortable"
+              (click)="onSortColumn(col)">
+            <div class="column-header">
+              <span>{{ col.label }}</span>
+              <i *ngIf="col.sortable" [class]="getSortIcon(col)"></i>
+            </div>
           </th>
         </tr>
       </thead>
