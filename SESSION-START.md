@@ -52,12 +52,23 @@ podman exec -it vehicle-discovery-platform-dev ng generate component foo
 ## Current Status
 
 ```
-Planning Phase
-├── ✅ API Discovery (PROJECT-OVERVIEW.md)
-├── ✅ Goals Defined (GOALS.md)
-├── ✅ Anti-Pattern Analysis (URL-STATE-ARCHITECTURE-ANALYSIS.md)
-├── ✅ State Management Patterns (STATE-MANAGEMENT-DRAFT.md)
-└── ⏳ Next: First ADRs OR Bootstrap project (awaiting PM decision)
+Phase 2: BaseTableComponent Implementation (IN PROGRESS)
+├── ✅ Phase 1: Foundation Complete
+│   ├── ✅ Angular 14 project bootstrapped
+│   ├── ✅ PrimeNG installed
+│   ├── ✅ UrlStateService implemented
+│   ├── ✅ BroadcastChannelService implemented
+│   ├── ✅ Routing infrastructure complete
+│   ├── ✅ Demo data infrastructure (validated against Elasticsearch)
+│   └── ✅ DemoApiService with filtering/sorting/pagination
+│
+└── ⏳ Phase 2: BaseTableComponent (CURRENT)
+    ├── ✅ Item 1: Demo data created (frontend/src/app/demo/)
+    ├── ⏳ Item 2: Create BaseTableComponent (IN PROGRESS)
+    ├── ⏳ Item 3: Create sample picker configuration
+    ├── ⏳ Item 4: Create sample results table configuration
+    ├── ⏳ Item 5: Create sample expandable table configuration
+    └── ⏳ Item 6: Create test page demonstrating all variants
 ```
 
 ---
@@ -65,9 +76,11 @@ Planning Phase
 ## Key Documents
 
 1. **[GOALS.md](GOALS.md)** - Project goals and requirements (READ THIS FIRST)
-2. **[PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)** - API, tech stack, workflow
-3. **[URL-STATE-ARCHITECTURE-ANALYSIS.md](URL-STATE-ARCHITECTURE-ANALYSIS.md)** - What NOT to copy from apn
-4. **[STATE-MANAGEMENT-DRAFT.md](STATE-MANAGEMENT-DRAFT.md)** - URL-first patterns
+2. **[ANALYSIS.md](ANALYSIS.md)** - Comprehensive codebase analysis (READ THIS SECOND)
+3. **[PICKER-CHECKBOX-BEHAVIOR.md](PICKER-CHECKBOX-BEHAVIOR.md)** - Tri-state checkbox specification
+4. **[PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)** - API, tech stack, workflow
+5. **[URL-STATE-ARCHITECTURE-ANALYSIS.md](URL-STATE-ARCHITECTURE-ANALYSIS.md)** - What NOT to copy from apn
+6. **[STATE-MANAGEMENT-DRAFT.md](STATE-MANAGEMENT-DRAFT.md)** - URL-first patterns
 
 ---
 
@@ -112,11 +125,47 @@ podman rm vehicle-discovery-platform-dev
 
 ---
 
-## Next Actions (Awaiting PM Decision)
+## Learning Goals (URL-First Architecture)
 
-**Option 1:** Draft ADRs (5 foundational decisions)
-**Option 2:** Bootstrap project (`ng new` + install deps)
-**Option 3:** Both (ADRs first, then bootstrap)
+### Goal 1: URL-First Architecture Understanding
+**Desired Outcome:** Developer gains clear understanding through hands-on implementation
+
+**Key Concepts to Master:**
+1. ✅ Dumb components receive state via @Input, emit events via @Output (never touch URL)
+2. ✅ Smart parent components hydrate from UrlStateService, update URL on events
+3. ⏳ "Start Wide, Go Narrow" pattern for paginated tables
+   - Initial broad search fetches all matches (e.g., ?models=Ford:F-150)
+   - Table shows first page, user can narrow with filters
+   - Pagination state lives in URL (?page=2&size=20)
+4. ⏳ Popped-out components sync via BroadcastChannel
+   - Main window URL = single source of truth
+   - Pop-out windows listen for state changes, never update their own URL
+   - BroadcastChannel broadcasts URL changes to all windows
+
+### Goal 2: Plugin-Based Picker System
+**Desired Outcome:** Add new picker with only configuration file (no code changes)
+
+**Configuration Controls:**
+- API endpoint (can be different per picker)
+- Columns: headers, labels, filterable, sortable, orderable
+- First column can be locked (always first, non-draggable)
+- Selection mode: single/multi, hierarchical parent-child
+
+### Goal 3: Configurable Results Tables
+**Desired Outcome:** Results tables configured like pickers + expandable row support
+
+**Configuration Controls:**
+- Same as picker (columns, API, filters, sorting)
+- Expandable rows with sub-table configuration
+- Sub-table loads data on-demand when row expands
+
+### Goal 4: Base Table Design Decision
+**Decision Made:** ✅ Single BaseTableComponent with configuration parameter
+
+- ✅ No separate SimpleTable/ExpandableTable/PickerTable components
+- ✅ Picker = BaseTable with selection configuration
+- ✅ Expandable = BaseTable with expandable configuration
+- ✅ Configuration drives all behavior
 
 ---
 
@@ -130,5 +179,5 @@ podman rm vehicle-discovery-platform-dev
 
 ---
 
-**Last Updated:** 2025-11-11
-**Quick Access:** Start with GOALS.md, then PROJECT-OVERVIEW.md
+**Last Updated:** 2025-11-11 (Phase 2 in progress)
+**Quick Access:** Start with GOALS.md, then ANALYSIS.md, then PICKER-CHECKBOX-BEHAVIOR.md

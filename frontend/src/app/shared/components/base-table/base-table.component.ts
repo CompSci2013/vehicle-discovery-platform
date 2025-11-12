@@ -25,10 +25,12 @@
 */
 
 import { Component, OnInit, OnChanges, SimpleChanges, Input, Output, EventEmitter, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { Subject } from 'rxjs';
 
 import { TableConfig, TableColumn } from '../../models/table-config.model';
 import { HierarchicalSelectionHelper, CheckboxState, SelectionChangeEvent } from '../../models/selection-state.model';
+import { UrlStateService } from '../../../core/services/url-state.service';
 
 @Component({
   selector: 'app-base-table',
@@ -79,6 +81,11 @@ export class BaseTableComponent implements OnInit, OnChanges, OnDestroy {
   // Cleanup
   private destroy$ = new Subject<void>();
 
+  constructor(
+    private urlState: UrlStateService,
+    private route: ActivatedRoute
+  ) {}
+
   /**
    * Lifecycle: Detect changes to @Input() properties
    * Used for URL-first hydration when initialSelection changes
@@ -110,6 +117,15 @@ export class BaseTableComponent implements OnInit, OnChanges, OnDestroy {
       console.log('[BaseTable] Hierarchical selection enabled');
       // We'll initialize this after data loads
     }
+
+    // STEP 1.2: Hydrate sort state from URL (URL-first pattern)
+    this.hydrateSortStateFromUrl();
+
+    // STEP 1.3: Hydrate filter state from URL (URL-first pattern)
+    this.hydrateFilterStateFromUrl();
+
+    // STEP 1.4: Hydrate pagination state from URL (URL-first pattern)
+    this.hydratePaginationStateFromUrl();
 
     // Load data
     this.loadData();
@@ -433,11 +449,24 @@ export class BaseTableComponent implements OnInit, OnChanges, OnDestroy {
 
   /**
    * PAGINATION: Page change event
+   * STEP 1.4: URL-first pattern - update URL first, then reload data if needed
    */
   onPageChange(event: any): void {
     console.log('[BaseTable] Page changed:', event);
     this.first = event.first;
     this.rows = event.rows;
+
+    // STEP 1.4: Update URL first (URL-first pattern)
+    const paginationParams = this.serializePaginationState();
+    this.urlState.setQueryParams(paginationParams).subscribe(
+      (success) => {
+        if (success) {
+          console.log('[BaseTable] Updated URL with pagination state:', paginationParams);
+        } else {
+          console.warn('[BaseTable] Failed to update URL with pagination state');
+        }
+      }
+    );
 
     // If using API, reload data with new page
     if (this.config.api) {
@@ -446,7 +475,166 @@ export class BaseTableComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   /**
+   * SORT STATE HYDRATION (URL-First Pattern)
+   * Deserialize sort state from URL parameter
+   * Format: ?sort=fieldName:asc or ?sort=fieldName:desc
+   * Example: ?sort=manufacturer:asc
+   *
+   * STEP 1.2: Hydrate sort state from URL on component init
+   */
+  private hydrateSortStateFromUrl(): void {
+    const sortParam = this.urlState.getQueryParamSnapshot('sort');
+    if (!sortParam) {
+      console.log('[BaseTable] No sort parameter in URL');
+      return;
+    }
+
+    // Deserialize: "fieldName:asc" → { sortField: "fieldName", sortOrder: "asc" }
+    const { sortField, sortOrder } = this.deserializeSortState(sortParam);
+
+    if (sortField) {
+      this.sortField = sortField;
+      this.sortOrder = sortOrder;
+      console.log('[BaseTable] Hydrated sort state from URL:', { sortField, sortOrder });
+    }
+  }
+
+  /**
+   * SORT STATE SERIALIZATION
+   * Convert { sortField, sortOrder } to URL parameter format
+   * Format: "fieldName:asc" → URL param value
+   */
+  private serializeSortState(): string {
+    if (!this.sortField) {
+      return '';
+    }
+    return `${this.sortField}:${this.sortOrder}`;
+  }
+
+  /**
+   * SORT STATE DESERIALIZATION
+   * Parse URL parameter to { sortField, sortOrder }
+   * Format: "fieldName:asc" → { sortField: "fieldName", sortOrder: "asc" }
+   */
+  private deserializeSortState(sortParam: string): { sortField: string | undefined; sortOrder: 'asc' | 'desc' } {
+    const parts = sortParam.split(':');
+    if (parts.length === 2 && (parts[1] === 'asc' || parts[1] === 'desc')) {
+      return {
+        sortField: parts[0],
+        sortOrder: parts[1]
+      };
+    }
+    // Invalid format, return defaults
+    return {
+      sortField: undefined,
+      sortOrder: 'asc'
+    };
+  }
+
+  /**
+   * FILTER STATE HYDRATION (URL-First Pattern)
+   * Deserialize filter state from URL parameters
+   * Format: ?f_columnKey=filterValue
+   * Example: ?f_manufacturer=Ford&f_model=F-150
+   *
+   * STEP 1.3: Hydrate filter state from URL on component init
+   */
+  private hydrateFilterStateFromUrl(): void {
+    // Get all query params and find those starting with 'f_'
+    const allParams = this.route.snapshot.queryParams || {};
+    const filterParams = Object.entries(allParams).filter(([key]) => key.startsWith('f_'));
+
+    if (filterParams.length === 0) {
+      console.log('[BaseTable] No filter parameters in URL');
+      return;
+    }
+
+    // Deserialize: { "f_columnKey": "filterValue" } → { "columnKey": "filterValue" }
+    filterParams.forEach(([key, value]) => {
+      const columnKey = key.substring(2); // Remove 'f_' prefix
+      this.activeFilters[columnKey] = String(value).toLowerCase();
+    });
+
+    console.log('[BaseTable] Hydrated filter state from URL:', this.activeFilters);
+  }
+
+  /**
+   * FILTER STATE SERIALIZATION
+   * Convert activeFilters to URL parameter format
+   * Format: { "columnKey": "filterValue" } → { "f_columnKey": "filterValue" }
+   *
+   * Returns object with 'f_' prefixed keys ready for setQueryParams()
+   */
+  private serializeFilterState(): Record<string, string> {
+    const filterParams: Record<string, string> = {};
+
+    Object.entries(this.activeFilters).forEach(([columnKey, filterValue]) => {
+      if (filterValue && filterValue.trim()) {
+        filterParams[`f_${columnKey}`] = filterValue;
+      }
+    });
+
+    return filterParams;
+  }
+
+  /**
+   * PAGINATION STATE HYDRATION (URL-First Pattern)
+   * Deserialize pagination state from URL parameters
+   * Format: ?page=1&pageSize=20
+   * Page is 1-indexed in URL for user-friendly display
+   * Internal state (this.first) is 0-indexed for PrimeNG
+   *
+   * STEP 1.4: Hydrate pagination state from URL on component init
+   */
+  private hydratePaginationStateFromUrl(): void {
+    const pageParam = this.route.snapshot.queryParams['page'];
+    const pageSizeParam = this.route.snapshot.queryParams['pageSize'];
+
+    // Parse page (1-indexed in URL, convert to 0-indexed for component)
+    if (pageParam) {
+      const pageNumber = parseInt(pageParam, 10);
+      if (!isNaN(pageNumber) && pageNumber > 0) {
+        // first = (pageNumber - 1) * pageSize
+        // We need to know pageSize to calculate first
+        const pageSize = pageSizeParam ? parseInt(pageSizeParam, 10) : this.rows;
+        if (!isNaN(pageSize) && pageSize > 0) {
+          this.first = (pageNumber - 1) * pageSize;
+        }
+      }
+    }
+
+    // Parse page size
+    if (pageSizeParam) {
+      const pageSize = parseInt(pageSizeParam, 10);
+      if (!isNaN(pageSize) && pageSize > 0) {
+        this.rows = pageSize;
+      }
+    }
+
+    if (pageParam || pageSizeParam) {
+      console.log('[BaseTable] Hydrated pagination state from URL:', { page: pageParam, pageSize: pageSizeParam, first: this.first, rows: this.rows });
+    }
+  }
+
+  /**
+   * PAGINATION STATE SERIALIZATION
+   * Convert component pagination state to URL parameter format
+   * Format: { first: 20, rows: 10 } → { page: "3", pageSize: "10" }
+   * Page is 1-indexed in URL for user-friendly display
+   */
+  private serializePaginationState(): { page: string; pageSize: string } {
+    // first = (pageNumber - 1) * rows
+    // pageNumber = (first / rows) + 1
+    const pageNumber = Math.floor(this.first / this.rows) + 1;
+    return {
+      page: String(pageNumber),
+      pageSize: String(this.rows)
+    };
+  }
+
+  /**
    * SORTING: Toggle sort on column
+   * STEP 1.2: URL-first pattern - update URL first, then apply to data
    * Clicking same column reverses direction, clicking different column sorts ascending
    */
   onSortColumn(column: TableColumn): void {
@@ -465,12 +653,25 @@ export class BaseTableComponent implements OnInit, OnChanges, OnDestroy {
       this.sortOrder = 'asc';
     }
 
+    // STEP 1.2: Update URL first (URL-first pattern)
+    const sortParam = this.serializeSortState();
+    this.urlState.setQueryParams({ sort: sortParam }).subscribe(
+      (success) => {
+        if (success) {
+          console.log('[BaseTable] Updated URL with sort state:', sortParam);
+        } else {
+          console.warn('[BaseTable] Failed to update URL with sort state');
+        }
+      }
+    );
+
     // Apply sort to data
     this.applyDataTransformations();
   }
 
   /**
    * FILTERING: Update filter for column
+   * STEP 1.3: URL-first pattern - update URL first, then apply to data
    */
   onFilterColumn(column: TableColumn, event: any): void {
     if (!column.filterable) {
@@ -486,16 +687,53 @@ export class BaseTableComponent implements OnInit, OnChanges, OnDestroy {
       delete this.activeFilters[column.key];
     }
 
+    // STEP 1.3: Update URL first (URL-first pattern)
+    const filterParams = this.serializeFilterState();
+    this.urlState.setQueryParams(filterParams).subscribe(
+      (success) => {
+        if (success) {
+          console.log('[BaseTable] Updated URL with filter state:', filterParams);
+        } else {
+          console.warn('[BaseTable] Failed to update URL with filter state');
+        }
+      }
+    );
+
     // Apply filters to data
     this.applyDataTransformations();
   }
 
   /**
    * FILTERING: Clear all filters
+   * STEP 1.3: URL-first pattern - update URL first, then apply to data
    */
   clearAllFilters(): void {
     console.log('[BaseTable] Clearing all filters');
     this.activeFilters = {};
+
+    // STEP 1.3: Update URL first - remove all f_ parameters
+    const allParams = this.route.snapshot.queryParams || {};
+    const filterKeys = Object.keys(allParams).filter(key => key.startsWith('f_'));
+
+    if (filterKeys.length > 0) {
+      // Create object with filter params set to undefined (removes them)
+      const clearParams: Record<string, string | undefined> = {};
+      filterKeys.forEach(key => {
+        clearParams[key] = undefined;  // undefined will remove from URL
+      });
+
+      this.urlState.setQueryParams(clearParams).subscribe(
+        (success) => {
+          if (success) {
+            console.log('[BaseTable] Cleared filter parameters from URL');
+          } else {
+            console.warn('[BaseTable] Failed to clear filter parameters from URL');
+          }
+        }
+      );
+    }
+
+    // Apply filters to data
     this.applyDataTransformations();
   }
 
