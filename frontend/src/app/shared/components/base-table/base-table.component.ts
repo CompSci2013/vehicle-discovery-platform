@@ -1135,6 +1135,39 @@ export class BaseTableComponent implements OnInit, OnChanges, OnDestroy {
     // Update data and total records
     this.data = transformed;
     this.totalRecords = transformed.length;
+
+    // PHASE 5 FIX: Update selection helper with filtered data for correct parent state calculation
+    // When filter/sort changes, we need to recalculate parent states based on visible data
+    this.updateSelectionHelperWithVisibleData();
+  }
+
+  /**
+   * PHASE 5: Update selection helper with visible (filtered/sorted) data
+   * This ensures parent checkbox states reflect visible children, not all children
+   * Preserves existing selections while updating the helper's data reference
+   */
+  private updateSelectionHelperWithVisibleData(): void {
+    if (!this.selectionHelper || !this.config.selection?.hierarchical?.enabled) {
+      return;
+    }
+
+    // Save current selections before recreating helper
+    const currentSelections = this.selectionHelper.getSelectedKeys();
+
+    // Recreate helper with visible/filtered data
+    const parentKey = this.config.selection.hierarchical.parentKey;
+    const childKey = this.config.selection.hierarchical.childKey;
+
+    this.selectionHelper = new HierarchicalSelectionHelper(this.data, parentKey, childKey);
+
+    // Restore selections
+    if (currentSelections.size > 0) {
+      this.selectionHelper.setSelectedKeys(currentSelections);
+      console.log('[BaseTable] Restored selections after filter/sort:', currentSelections);
+    }
+
+    // Update parent checkbox state cache
+    this.updateParentCheckboxStateCache();
   }
 
   /**

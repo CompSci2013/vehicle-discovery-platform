@@ -15,60 +15,38 @@
   gap: 1rem;
 }
 
-// HEADER
-.base-table-header {
+// HEADER & FOOTER
+.base-table-header,
+.base-table-footer {
   display: flex;
-  justify-content: space-between;
   align-items: center;
   padding: 0.75rem 1rem;
   background-color: var(--surface-50);
   border: 1px solid var(--surface-200);
   border-radius: var(--border-radius);
+
+  .action-buttons {
+    display: flex;
+    gap: 0.5rem;
+  }
+}
+
+.base-table-header {
+  justify-content: space-between;
 
   .selection-count {
     font-size: 0.875rem;
     color: var(--text-color-secondary);
     font-weight: 500;
   }
-
-  .action-buttons {
-    display: flex;
-    gap: 0.5rem;
-  }
 }
 
-// FOOTER
 .base-table-footer {
-  display: flex;
   justify-content: flex-end;
-  align-items: center;
-  padding: 0.75rem 1rem;
-  background-color: var(--surface-50);
-  border: 1px solid var(--surface-200);
-  border-radius: var(--border-radius);
-
-  .action-buttons {
-    display: flex;
-    gap: 0.5rem;
-  }
 }
 
-// LOADING STATE
-.loading-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 3rem 1rem;
-  gap: 1rem;
-
-  p {
-    color: var(--text-color-secondary);
-    margin: 0;
-  }
-}
-
-// EMPTY STATE
+// LOADING STATE & EMPTY STATE
+.loading-container,
 .empty-state {
   display: flex;
   flex-direction: column;
@@ -78,15 +56,15 @@
   gap: 1rem;
   color: var(--text-color-secondary);
 
-  .empty-icon {
-    font-size: 3rem;
-    opacity: 0.3;
-  }
-
   p {
     margin: 0;
     font-size: 1rem;
   }
+}
+
+.empty-state .empty-icon {
+  font-size: 3rem;
+  opacity: 0.3;
 }
 
 // FILTER ROW
@@ -104,25 +82,19 @@
   .filter-cell {
     flex: 1;
     min-width: 150px;
+  }
 
-    .filter-input {
-      width: 100%;
-      padding: 0.5rem 0.75rem;
-      font-size: 0.875rem;
-      border: 1px solid var(--surface-300);
-      border-radius: var(--border-radius);
-      background-color: white;
-      transition: border-color 0.2s, box-shadow 0.2s;
+  .filter-input {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    border: 1px solid var(--surface-300);
+    border-radius: var(--border-radius);
+    transition: border-color 0.2s;
 
-      &:focus {
-        outline: none;
-        border-color: var(--primary-color);
-        box-shadow: 0 0 0 3px rgba(var(--primary-color-rgb), 0.1);
-      }
-
-      &::placeholder {
-        color: var(--text-color-secondary);
-      }
+    &:focus {
+      outline: none;
+      border-color: var(--primary-color);
     }
   }
 
@@ -139,10 +111,6 @@
 
     &:hover {
       background-color: var(--surface-300);
-    }
-
-    &:active {
-      background-color: var(--surface-400);
     }
   }
 }
@@ -276,46 +244,6 @@
   }
 }
 
-// PARENT CHECKBOX INDETERMINATE STATE
-// PrimeNG doesn't support [indeterminate] input, so we use CSS
-.parent-checkbox-wrapper {
-  display: inline-block;
-  margin-right: 8px;
-
-  ::ng-deep {
-    // Checkbox label spacing
-    .p-checkbox-label {
-      margin-left: 0.5rem;
-    }
-  }
-
-  // Indeterminate state visual styling (minus icon)
-  &.indeterminate ::ng-deep {
-    .p-checkbox .p-checkbox-box {
-      background-color: var(--primary-color) !important;
-      border-color: var(--primary-color) !important;
-
-      // Create horizontal minus line
-      &::after {
-        content: '' !important;
-        position: absolute !important;
-        width: 60% !important;
-        height: 2px !important;
-        background-color: white !important;
-        top: 50% !important;
-        left: 50% !important;
-        transform: translate(-50%, -50%) !important;
-        display: block !important;
-      }
-    }
-
-    // Hide the checkmark icon when indeterminate
-    .p-checkbox .p-checkbox-box .p-checkbox-icon {
-      display: none !important;
-    }
-  }
-}
-
 // INLINE CHECKBOX (for child checkboxes in dual mode)
 .checkbox-inline {
   display: inline-block;
@@ -353,8 +281,6 @@
 
 // Child row styling (single-selector pattern)
 .child-row {
-  background-color: white;
-
   &:hover {
     background-color: var(--surface-50);
   }
@@ -378,14 +304,9 @@
     }
   }
 
-  .child-data-cell {
-    // Child data cells with indent
-    .child-indent {
-      display: block;
-      margin-left: 1.5rem;
-      font-size: 0.95rem;
-      color: var(--text-color);
-    }
+  .child-indent {
+    display: block;
+    margin-left: 1.5rem;
   }
 
   .checkbox-cell {
@@ -410,6 +331,10 @@
 
   p-checkbox {
     display: flex;
+  }
+
+  ::ng-deep .p-checkbox-label {
+    margin-left: 0.5rem;
   }
 }
 

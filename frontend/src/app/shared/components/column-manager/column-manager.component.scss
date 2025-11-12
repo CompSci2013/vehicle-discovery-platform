@@ -233,17 +233,8 @@
       cursor: not-allowed;
     }
 
-    /* RESET BUTTON */
-    &--reset {
-      background: var(--surface-200, #e5e7eb);
-      color: var(--text-900, #111827);
-
-      &:hover:not(:disabled) {
-        background: var(--surface-300, #d1d5db);
-      }
-    }
-
-    /* CANCEL BUTTON */
+    /* RESET & CANCEL BUTTONS */
+    &--reset,
     &--cancel {
       background: var(--surface-200, #e5e7eb);
       color: var(--text-900, #111827);
