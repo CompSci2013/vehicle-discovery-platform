@@ -27,10 +27,11 @@
 import { Component, OnInit, OnChanges, SimpleChanges, Input, Output, EventEmitter, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { Subject } from 'rxjs';
+import { debounceTime, distinctUntilChanged, takeUntil } from 'rxjs/operators';
 
 import { TableConfig, TableColumn } from '../../models/table-config.model';
 import { HierarchicalSelectionHelper, CheckboxState, SelectionChangeEvent } from '../../models/selection-state.model';
-import { UrlStateService } from '../../../core/services/url-state.service';
+import { UrlStateService, RequestCoordinatorService, ApiService } from '../../../core/services';
 
 @Component({
   selector: 'app-base-table',
@@ -83,8 +84,12 @@ export class BaseTableComponent implements OnInit, OnChanges, OnDestroy {
 
   constructor(
     private urlState: UrlStateService,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private requestCoordinator: RequestCoordinatorService
   ) {}
+
+  // Subject to watch for URL changes (used in ngOnInit)
+  private urlChange$ = new Subject<void>();
 
   /**
    * Lifecycle: Detect changes to @Input() properties
@@ -127,6 +132,22 @@ export class BaseTableComponent implements OnInit, OnChanges, OnDestroy {
     // STEP 1.4: Hydrate pagination state from URL (URL-first pattern)
     this.hydratePaginationStateFromUrl();
 
+    // PHASE 2: Subscribe to URL changes and reload data when URL changes
+    // This enables server-side operations (sort, filter, pagination all via API)
+    if (this.config.api) {
+      console.log('[BaseTable] API mode enabled, watching URL changes');
+      this.route.queryParams
+        .pipe(
+          debounceTime(300),  // Wait for rapid URL changes to settle
+          distinctUntilChanged(),
+          takeUntil(this.destroy$)
+        )
+        .subscribe(() => {
+          console.log('[BaseTable] URL changed, reloading data from API');
+          this.loadData();
+        });
+    }
+
     // Load data
     this.loadData();
   }
@@ -139,11 +160,19 @@ export class BaseTableComponent implements OnInit, OnChanges, OnDestroy {
   /**
    * LOAD DATA
    * Loads data from config.data (static) or config.api (dynamic)
+   * PHASE 2: Added API support with server-side operations
    */
   private loadData(): void {
     console.log('[BaseTable] loadData() called');
 
-    // Option 1: Static data
+    // Option 1: API data (server-side operations)
+    if (this.config.api) {
+      console.log('[BaseTable] Loading data from API');
+      this.loadDataFromApi();
+      return;
+    }
+
+    // Option 2: Static data (client-side operations only)
     if (this.config.data) {
       console.log('[BaseTable] Using static data:', this.config.data.length, 'rows');
       this.data = this.config.data;
@@ -154,18 +183,114 @@ export class BaseTableComponent implements OnInit, OnChanges, OnDestroy {
       return;
     }
 
-    // Option 2: API data
-    if (this.config.api) {
-      console.log('[BaseTable] API loading not yet implemented');
-      // TODO: Implement API loading in next iteration
-      this.loading = true;
-      return;
-    }
-
     // No data source
     console.warn('[BaseTable] No data source configured (config.data or config.api)');
     this.data = [];
     this.totalRecords = 0;
+  }
+
+  /**
+   * LOAD DATA FROM API (PHASE 2)
+   * Fetches data from API endpoint with URL-first parameters
+   * Uses RequestCoordinator to deduplicate identical concurrent requests
+   */
+  private loadDataFromApi(): void {
+    // Set loading state
+    this.loading = true;
+
+    // Build request parameters from current component state
+    const apiParams = this.buildApiRequestParams();
+    console.log('[BaseTable] API request params:', apiParams);
+
+    // Get API endpoint (required)
+    const apiEndpoint = this.config.api?.http?.endpoint;
+    if (!apiEndpoint) {
+      console.error('[BaseTable] API endpoint not configured');
+      this.loading = false;
+      return;
+    }
+
+    // Use RequestCoordinator to deduplicate concurrent requests
+    // If another component is already requesting the same data, this returns cached Observable
+    this.requestCoordinator
+      .get(apiEndpoint, apiParams)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response: any) => {
+          console.log('[BaseTable] API response received:', response);
+
+          // Apply response transformer if configured
+          if (this.config.api?.responseTransformer) {
+            response = this.config.api.responseTransformer(response);
+          }
+
+          // Extract data and totals from response
+          // Expected response format: { data: [...], total: number, page: number, pageSize: number }
+          this.data = response.data || response.results || [];
+          this.totalRecords = response.total || response.totalRecords || 0;
+
+          // Initialize selection helper after API data is loaded
+          this.initializeSelectionHelper();
+
+          this.loading = false;
+          console.log('[BaseTable] Data loaded from API:', this.data.length, 'rows');
+        },
+        error: (error: any) => {
+          console.error('[BaseTable] API error:', error);
+          this.handleApiError(error);
+          this.loading = false;
+        }
+      });
+  }
+
+  /**
+   * BUILD API REQUEST PARAMETERS (PHASE 2)
+   * Converts component state (sort, filter, pagination) to API request parameters
+   * Respects URL-first principle: uses component state that was hydrated from URL
+   *
+   * @returns API request parameter object
+   */
+  private buildApiRequestParams(): any {
+    const params: any = {
+      // Pagination: convert 0-indexed first/rows to 1-indexed page/pageSize
+      page: Math.floor(this.first / this.rows) + 1,
+      pageSize: this.rows
+    };
+
+    // Sorting: only include if sort is active
+    if (this.sortField) {
+      params.sortBy = this.sortField;
+      params.sortOrder = this.sortOrder;
+    }
+
+    // Filtering: only include if any filters are active
+    if (Object.keys(this.activeFilters).length > 0) {
+      params.filters = this.activeFilters;
+    }
+
+    // Apply param mapper if configured (for API-specific transformations)
+    if (this.config.api?.paramMapper) {
+      return this.config.api.paramMapper(params);
+    }
+
+    return params;
+  }
+
+  /**
+   * HANDLE API ERROR (PHASE 2)
+   * Gracefully handles API errors with appropriate UI feedback
+   *
+   * @param error - The error from API call
+   */
+  private handleApiError(error: any): void {
+    console.error('[BaseTable] API error occurred:', error);
+
+    // Reset data
+    this.data = [];
+    this.totalRecords = 0;
+
+    // Emit error event or show toast message
+    // For now, just log and keep UI responsive
   }
 
   /**
