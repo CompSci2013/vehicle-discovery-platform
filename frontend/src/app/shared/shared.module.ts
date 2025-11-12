@@ -31,11 +31,13 @@ import { TooltipModule } from 'primeng/tooltip';
 
 // Shared Components
 import { BaseTableComponent } from './components/base-table/base-table.component';
+import { ColumnManagerComponent } from './components/column-manager/column-manager.component';
 
 
 @NgModule({
   declarations: [
-    BaseTableComponent
+    BaseTableComponent,
+    ColumnManagerComponent
   ],
   imports: [
     CommonModule,
@@ -74,7 +76,8 @@ import { BaseTableComponent } from './components/base-table/base-table.component
     PaginatorModule,
     TooltipModule,
     // Shared components
-    BaseTableComponent
+    BaseTableComponent,
+    ColumnManagerComponent
   ]
 })
 export class SharedModule { }

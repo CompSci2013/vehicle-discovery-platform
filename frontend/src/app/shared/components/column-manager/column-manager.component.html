@@ -1,0 +1,121 @@
+<!-- COLUMN MANAGER COMPONENT -->
+<!-- Provides UI for managing column visibility, order, and width -->
+
+<div class="column-manager">
+  <!-- HEADER -->
+  <div class="column-manager__header">
+    <h3 class="column-manager__title">Manage Columns</h3>
+    <span class="column-manager__subtitle">
+      {{ getVisibleColumnCount() }} of {{ getTotalColumnCount() }} columns visible
+    </span>
+  </div>
+
+  <!-- COLUMN LIST -->
+  <div class="column-manager__list-container">
+    <div class="column-manager__list">
+      <!-- Column item for each column -->
+      <div
+        *ngFor="let columnState of workingCopy; let i = index"
+        class="column-manager__item">
+
+        <!-- REORDER BUTTONS -->
+        <div class="column-manager__reorder-buttons">
+          <button
+            *ngIf="isReorderable() && i > 0"
+            class="column-manager__reorder-btn"
+            (click)="moveColumnUp(i)"
+            title="Move up">
+            ▲
+          </button>
+          <button
+            *ngIf="isReorderable() && i < workingCopy.length - 1"
+            class="column-manager__reorder-btn"
+            (click)="moveColumnDown(i)"
+            title="Move down">
+            ▼
+          </button>
+          <span
+            *ngIf="!isReorderable() || (i === 0 && i === workingCopy.length - 1)"
+            class="column-manager__reorder-placeholder">
+          </span>
+        </div>
+
+        <!-- VISIBILITY CHECKBOX -->
+        <div class="column-manager__checkbox-container">
+          <input
+            type="checkbox"
+            class="column-manager__checkbox"
+            [checked]="columnState.visible"
+            [disabled]="isLockedColumn(columnState.key)"
+            (change)="toggleColumnVisibility(columnState.key)"
+            [attr.aria-label]="'Toggle visibility for ' + getColumnLabel(columnState.key)">
+        </div>
+
+        <!-- COLUMN NAME -->
+        <span class="column-manager__label">
+          {{ getColumnLabel(columnState.key) }}
+        </span>
+
+        <!-- COLUMN WIDTH INPUT -->
+        <div class="column-manager__width-container">
+          <input
+            type="text"
+            class="column-manager__width-input"
+            [value]="columnState.width || ''"
+            [disabled]="!isResizable(columnState.key)"
+            placeholder="auto"
+            (input)="updateColumnWidth(columnState.key, $any($event).target.value)"
+            title="Width (e.g., 150px, 20%)">
+        </div>
+
+        <!-- LOCKED INDICATOR -->
+        <span
+          *ngIf="isLockedColumn(columnState.key)"
+          class="column-manager__locked-indicator"
+          title="This column cannot be hidden">
+          🔒
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER WITH BUTTONS -->
+  <div class="column-manager__footer">
+    <button
+      class="column-manager__btn column-manager__btn--reset"
+      (click)="onReset()"
+      title="Reset to default column configuration">
+      Reset to Default
+    </button>
+
+    <div class="column-manager__button-group">
+      <button
+        class="column-manager__btn column-manager__btn--cancel"
+        (click)="onCancel()"
+        title="Cancel changes">
+        Cancel
+      </button>
+
+      <button
+        class="column-manager__btn column-manager__btn--apply"
+        (click)="onApply()"
+        [disabled]="!hasChanges"
+        title="Apply and save changes">
+        Apply Changes
+      </button>
+    </div>
+  </div>
+
+  <!-- HINTS/HELP TEXT -->
+  <div class="column-manager__hints">
+    <p class="column-manager__hint">
+      <strong>💡 Tips:</strong>
+    </p>
+    <ul class="column-manager__hint-list">
+      <li>Check/uncheck to show/hide columns</li>
+      <li *ngIf="isReorderable()">Use ▲/▼ buttons to reorder columns</li>
+      <li>Enter width in pixels (150px) or percentage (20%)</li>
+      <li>Click Apply to save your preferences</li>
+    </ul>
+  </div>
+</div>

@@ -37,6 +37,8 @@ export interface TableColumn {
   filterable?: boolean;           // Enable column filtering
   visible?: boolean;              // Column visibility (default: true)
   locked?: boolean;               // Prevent reordering/hiding (e.g., checkbox column)
+  resizable?: boolean;            // Allow width resizing in ColumnManager (default: true)
+  reorderable?: boolean;          // Allow reordering in ColumnManager (default: true)
 
   // Formatting
   dateFormat?: string;            // Date format string (for type: 'date')
