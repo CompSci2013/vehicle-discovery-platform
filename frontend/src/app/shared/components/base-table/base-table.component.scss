@@ -322,6 +322,111 @@
   margin-right: 8px;
 }
 
+// PHASE 4: HIERARCHICAL SELECTION STYLES (Single and Dual Selector Patterns)
+
+// Parent row styling (single-selector pattern)
+.parent-row {
+  background-color: var(--surface-50);
+  font-weight: 500;
+
+  &:hover {
+    background-color: var(--surface-100);
+  }
+
+  td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--surface-200);
+  }
+
+  .checkbox-cell {
+    width: 50px;
+    padding: 0.75rem;
+    text-align: center;
+  }
+
+  .parent-value-cell {
+    background-color: var(--surface-100);
+    font-weight: 600;
+    color: var(--text-color);
+  }
+}
+
+// Child row styling (single-selector pattern)
+.child-row {
+  background-color: white;
+
+  &:hover {
+    background-color: var(--surface-50);
+  }
+
+  &.selected {
+    background-color: var(--primary-50);
+
+    &:hover {
+      background-color: var(--primary-100);
+    }
+  }
+
+  td {
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid var(--surface-100);
+
+    &:first-child {
+      width: 50px;
+      padding: 0.5rem 0.75rem;
+      text-align: center;
+    }
+  }
+
+  .child-data-cell {
+    // Child data cells with indent
+    .child-indent {
+      display: block;
+      margin-left: 1.5rem;
+      font-size: 0.95rem;
+      color: var(--text-color);
+    }
+  }
+
+  .checkbox-cell {
+    width: 50px;
+    padding: 0.5rem;
+    text-align: center;
+  }
+}
+
+// Single-selector table specific styles
+.single-selector-table {
+  tbody tr {
+    transition: background-color 0.2s ease;
+  }
+}
+
+// Parent checkbox wrapper (dual-selector pattern)
+.parent-checkbox-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  p-checkbox {
+    display: flex;
+  }
+}
+
+// Checkbox cell alignment
+.checkbox-cell {
+  width: 50px;
+  min-width: 50px;
+  padding: 0.75rem;
+  text-align: center;
+  vertical-align: middle;
+
+  p-checkbox {
+    display: flex;
+    justify-content: center;
+  }
+}
+
 // RESPONSIVE DESIGN
 @media (max-width: 768px) {
   .base-table-header,

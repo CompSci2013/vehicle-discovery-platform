@@ -46,8 +46,8 @@
     <p>{{ config.emptyMessage || 'No data available' }}</p>
   </div>
 
-  <!-- TABLE: HIERARCHICAL MODE - SINGLE CHECKBOX DISPLAY -->
-  <div *ngIf="!loading && data.length > 0 && config.selection?.hierarchical?.enabled && config.selection?.displayMode === 'single'" class="table-wrapper">
+  <!-- TABLE: SINGLE-SELECTOR PICKER PATTERN -->
+  <div *ngIf="!loading && data.length > 0 && isSingleSelectorMode()" class="table-wrapper">
     <!-- FILTER ROW (if any column is filterable) -->
     <div *ngIf="hasFilterableColumns()" class="filter-row">
       <div class="filter-cell" style="width: 50px"></div>
@@ -65,7 +65,7 @@
       </button>
     </div>
 
-    <table class="hierarchical-table">
+    <table class="hierarchical-table single-selector-table">
       <!-- HEADER -->
       <thead>
         <tr>
@@ -81,28 +81,48 @@
         </tr>
       </thead>
 
-      <!-- BODY: Separate checkbox column on left, then all data columns -->
+      <!-- BODY: Hierarchical structure with parent rows followed by child rows -->
       <tbody>
-        <tr *ngFor="let row of data" class="data-row">
-          <!-- Separate checkbox column (left side) -->
-          <td>
-            <p-checkbox
-              [ngModel]="isRowSelected(row)"
-              [binary]="true"
-              (onChange)="onChildCheckboxChange(row, $event)">
-            </p-checkbox>
-          </td>
-          <!-- Data columns -->
-          <td *ngFor="let col of getVisibleColumns()">
-            {{ row[col.key] }}
-          </td>
-        </tr>
+        <!-- Parent row for each unique parent value, followed by its children -->
+        <ng-container *ngFor="let parentValue of getHierarchicalParents()">
+          <!-- Parent row -->
+          <tr class="parent-row">
+            <td class="checkbox-cell">
+              <p-checkbox
+                [ngModel]="getParentCheckboxValue(parentValue)"
+                [binary]="true"
+                (onChange)="onParentCheckboxChange(parentValue, $event)">
+              </p-checkbox>
+            </td>
+            <!-- Parent value in first column -->
+            <td class="parent-value-cell" [attr.colspan]="getVisibleColumns().length">
+              <strong>{{ parentValue }}</strong>
+            </td>
+          </tr>
+
+          <!-- Child rows for this parent (indented) -->
+          <tr *ngFor="let child of getChildrenForParent(parentValue)"
+              class="child-row"
+              [class.selected]="isRowSelected(child)">
+            <td class="checkbox-cell">
+              <p-checkbox
+                [ngModel]="isRowSelected(child)"
+                [binary]="true"
+                (onChange)="onChildCheckboxChange(child, $event)">
+              </p-checkbox>
+            </td>
+            <!-- Data columns for child -->
+            <td *ngFor="let col of getVisibleColumns()" class="child-data-cell">
+              <span class="child-indent">{{ child[col.key] }}</span>
+            </td>
+          </tr>
+        </ng-container>
       </tbody>
     </table>
   </div>
 
-  <!-- TABLE: HIERARCHICAL MODE - DUAL CHECKBOX DISPLAY -->
-  <div *ngIf="!loading && data.length > 0 && config.selection?.hierarchical?.enabled && config.selection?.displayMode === 'dual'" class="table-wrapper">
+  <!-- TABLE: DUAL-SELECTOR PICKER PATTERN -->
+  <div *ngIf="!loading && data.length > 0 && isDualSelectorMode()" class="table-wrapper">
     <!-- FILTER ROW (if any column is filterable) -->
     <div *ngIf="hasFilterableColumns()" class="filter-row">
       <div *ngFor="let col of getVisibleColumns()" class="filter-cell">
@@ -138,19 +158,20 @@
       <tbody>
         <tr *ngFor="let row of data" class="data-row">
           <td *ngFor="let col of getVisibleColumns(); let colIndex = index">
-            <!-- Parent checkbox embedded in parent column (with indeterminate wrapper) -->
-            <ng-container *ngIf="colIndex === config.selection?.hierarchical?.parentColumn">
-              <div class="parent-checkbox-wrapper"
-                   [class.indeterminate]="getCachedParentState(row[config.selection?.hierarchical?.parentKey || '']) === 'indeterminate'">
+            <!-- Parent checkbox embedded in parent column (if dual-selector mode) -->
+            <!-- PHASE 4 FIX: In dual mode, shows THIS ROW's selection state, but clicking affects ALL rows with that parent -->
+            <ng-container *ngIf="shouldShowParentCheckbox(colIndex)">
+              <div class="parent-checkbox-wrapper">
                 <p-checkbox
-                  [ngModel]="getCachedParentState(row[config.selection?.hierarchical?.parentKey || '']) === 'checked'"
+                  [ngModel]="getParentCheckboxValue(row[config.selection?.hierarchical?.parentKey || ''], row)"
                   [binary]="true"
                   (onChange)="onParentCheckboxChange(row[config.selection?.hierarchical?.parentKey || ''], $event)">
                 </p-checkbox>
               </div>
             </ng-container>
-            <!-- Child checkbox embedded in child column -->
-            <ng-container *ngIf="colIndex === config.selection?.hierarchical?.childColumn">
+
+            <!-- Child checkbox embedded in child column (if dual-selector mode) -->
+            <ng-container *ngIf="shouldShowChildCheckbox(colIndex)">
               <p-checkbox
                 [ngModel]="isRowSelected(row)"
                 [binary]="true"
@@ -158,8 +179,21 @@
                 class="checkbox-inline">
               </p-checkbox>
             </ng-container>
-            <!-- Column value -->
-            {{ row[col.key] }}
+
+            <!-- Column value (only if no checkbox in this column) -->
+            <span *ngIf="!shouldShowParentCheckbox(colIndex) && !shouldShowChildCheckbox(colIndex)">
+              {{ row[col.key] }}
+            </span>
+
+            <!-- Column value alongside parent checkbox -->
+            <span *ngIf="shouldShowParentCheckbox(colIndex)">
+              {{ row[col.key] }}
+            </span>
+
+            <!-- Column value alongside child checkbox -->
+            <span *ngIf="shouldShowChildCheckbox(colIndex)">
+              {{ row[col.key] }}
+            </span>
           </td>
         </tr>
       </tbody>

@@ -16,7 +16,8 @@
 
   FEATURES:
   ✅ Configuration-driven rendering
-  ✅ Hierarchical checkbox selection (tri-state)
+  ✅ Hierarchical checkbox selection (binary: checked/unchecked)
+  ✅ Two picker patterns: single-selector and dual-selector
   ✅ Expandable rows with sub-tables
   ✅ Pagination
   ✅ Sorting and filtering
@@ -24,14 +25,14 @@
   ✅ Empty states
 */
 
-import { Component, OnInit, OnChanges, SimpleChanges, Input, Output, EventEmitter, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnChanges, SimpleChanges, Input, Output, EventEmitter, OnDestroy } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { Subject } from 'rxjs';
 import { debounceTime, distinctUntilChanged, takeUntil } from 'rxjs/operators';
 
 import { TableConfig, TableColumn } from '../../models/table-config.model';
 import { HierarchicalSelectionHelper, CheckboxState, SelectionChangeEvent } from '../../models/selection-state.model';
-import { UrlStateService, RequestCoordinatorService, ApiService } from '../../../core/services';
+import { UrlStateService, RequestCoordinatorService } from '../../../core/services';
 
 @Component({
   selector: 'app-base-table',
@@ -65,8 +66,13 @@ export class BaseTableComponent implements OnInit, OnChanges, OnDestroy {
   selectedRows: Set<string> = new Set();
 
   // Parent checkbox state cache (prevents infinite change detection loop)
-  // Maps parentValue -> CheckboxState ('checked' | 'indeterminate' | 'unchecked')
+  // Maps parentValue -> CheckboxState ('checked' | 'unchecked')
   parentCheckboxStates = new Map<string, CheckboxState>();
+
+  // PHASE 4: Picker pattern detection (single-selector or dual-selector)
+  pickerPattern: 'single' | 'dual' | undefined;
+  parentColumnIndex: number | undefined;
+  childColumnIndex: number | undefined;
 
   // Sorting
   sortField?: string;                           // Current sort column
@@ -87,9 +93,6 @@ export class BaseTableComponent implements OnInit, OnChanges, OnDestroy {
     private route: ActivatedRoute,
     private requestCoordinator: RequestCoordinatorService
   ) {}
-
-  // Subject to watch for URL changes (used in ngOnInit)
-  private urlChange$ = new Subject<void>();
 
   /**
    * Lifecycle: Detect changes to @Input() properties
@@ -120,6 +123,7 @@ export class BaseTableComponent implements OnInit, OnChanges, OnDestroy {
     // Initialize selection helper (if selection enabled)
     if (this.config.selection?.enabled && this.config.selection.hierarchical?.enabled) {
       console.log('[BaseTable] Hierarchical selection enabled');
+      this.detectPickerPattern();
       // We'll initialize this after data loads
     }
 
@@ -155,6 +159,45 @@ export class BaseTableComponent implements OnInit, OnChanges, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  /**
+   * PHASE 4 STEP 4.1: Detect Picker Pattern Configuration
+   * Determines which picker pattern is being used:
+   * - Single-selector: Only parent checkbox column on left (parentColumn undefined)
+   * - Dual-selector: Parent and child checkboxes in data columns (parentColumn and childColumn defined)
+   *
+   * This method must be called during initialization to determine template rendering strategy.
+   */
+  private detectPickerPattern(): void {
+    const hierarchicalConfig = this.config.selection?.hierarchical;
+
+    if (!hierarchicalConfig?.enabled) {
+      console.log('[BaseTable] Hierarchical selection not enabled');
+      return;
+    }
+
+    // Check if parentColumn is defined (indicates dual-selector pattern)
+    const parentColumnDefined = hierarchicalConfig.parentColumn !== undefined;
+    const childColumnDefined = hierarchicalConfig.childColumn !== undefined;
+
+    if (parentColumnDefined && childColumnDefined) {
+      // Dual-selector pattern: checkboxes in data columns
+      this.pickerPattern = 'dual';
+      this.parentColumnIndex = hierarchicalConfig.parentColumn;
+      this.childColumnIndex = hierarchicalConfig.childColumn;
+      console.log('[BaseTable] Picker pattern: DUAL (parent in column', this.parentColumnIndex, ', child in column', this.childColumnIndex, ')');
+    } else {
+      // Single-selector pattern: checkbox column on left
+      this.pickerPattern = 'single';
+      console.log('[BaseTable] Picker pattern: SINGLE (parent checkbox column on left)');
+    }
+
+    console.log('[BaseTable] Pattern detection complete:', {
+      pattern: this.pickerPattern,
+      parentColumn: this.parentColumnIndex,
+      childColumn: this.childColumnIndex
+    });
   }
 
   /**
@@ -296,6 +339,7 @@ export class BaseTableComponent implements OnInit, OnChanges, OnDestroy {
   /**
    * INITIALIZE SELECTION HELPER
    * Creates HierarchicalSelectionHelper for parent-child checkboxes
+   * PHASE 4 STEP 4.5: Hydrates selection from URL after helper is created
    */
   private initializeSelectionHelper(): void {
     if (!this.config.selection?.hierarchical?.enabled) {
@@ -312,6 +356,9 @@ export class BaseTableComponent implements OnInit, OnChanges, OnDestroy {
     if (this.initialSelection && this.initialSelection.size > 0) {
       console.log('[BaseTable] Applying initial selection from URL:', this.initialSelection);
       this.hydrateSelection(this.initialSelection);
+    } else {
+      // PHASE 4 STEP 4.5: Try to hydrate selection from URL parameter
+      this.hydrateSelectionFromUrl();
     }
 
     // Build initial parent checkbox state cache
@@ -363,6 +410,42 @@ export class BaseTableComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   /**
+   * PHASE 4 HELPER: Determine if single-selector pattern is active
+   */
+  isSingleSelectorMode(): boolean {
+    return this.pickerPattern === 'single';
+  }
+
+  /**
+   * PHASE 4 HELPER: Determine if dual-selector pattern is active
+   */
+  isDualSelectorMode(): boolean {
+    return this.pickerPattern === 'dual';
+  }
+
+  /**
+   * PHASE 4 HELPER: Determine if parent checkbox should be shown for this column (dual mode only)
+   * In dual mode, parent checkbox appears in the parent column
+   */
+  shouldShowParentCheckbox(columnIndex: number): boolean {
+    if (!this.isDualSelectorMode()) {
+      return false;
+    }
+    return columnIndex === this.parentColumnIndex;
+  }
+
+  /**
+   * PHASE 4 HELPER: Determine if child checkbox should be shown for this column (dual mode only)
+   * In dual mode, child checkbox appears in the child column
+   */
+  shouldShowChildCheckbox(columnIndex: number): boolean {
+    if (!this.isDualSelectorMode()) {
+      return false;
+    }
+    return columnIndex === this.childColumnIndex;
+  }
+
+  /**
    * CHECKBOX: Is row selected?
    */
   isRowSelected(row: any): boolean {
@@ -393,18 +476,30 @@ export class BaseTableComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   /**
-   * CHECKBOX: Get parent checkbox value for PrimeNG (true/false/null)
-   * PrimeNG tri-state checkbox expects: true (checked), false (unchecked), null (indeterminate)
+   * CHECKBOX: Get parent checkbox value (binary only - no indeterminate/tri-state)
+   * PHASE 4 STEP 4.3: Dual-selector mode behavior
+   *
+   * In dual-selector mode: Display the specific row's selection state
+   * (Parent checkbox shows if THIS ROW is selected, not aggregate state)
+   *
+   * In single-selector mode: Display aggregate parent state
+   * (Parent checkbox shows if ALL children are selected)
    */
-  getParentCheckboxValue(parentValue: string): boolean | null {
+  getParentCheckboxValue(parentValue: string, row?: any): boolean {
+    // In dual mode, show the specific row's selection state
+    if (this.isDualSelectorMode() && row) {
+      return this.isRowSelected(row);
+    }
+
+    // In single mode, show the aggregate parent state
     const state = this.getParentCheckboxState(parentValue);
-    if (state === 'checked') return true;
-    if (state === 'unchecked') return false;
-    return null; // indeterminate
+    return state === 'checked';
   }
 
   /**
    * CHECKBOX: Toggle child row
+   * PHASE 4 STEP 4.4: After toggling child, enforce state matching rule
+   * Parent checkbox state will be recomputed to match child selection count
    */
   onChildCheckboxChange(row: any, event: any): void {
     console.log('[BaseTable] onChildCheckboxChange:', row, 'checked:', event.checked);
@@ -419,16 +514,53 @@ export class BaseTableComponent implements OnInit, OnChanges, OnDestroy {
     // Update parent checkbox state cache
     this.updateParentCheckboxStateCache();
 
+    // PHASE 4: Enforce state matching rule after child change
+    this.enforceStateMatchingRule();
+
     // Emit selection change event
     this.emitSelectionChange();
   }
 
   /**
+   * PHASE 4 STEP 4.4: Enforce state matching rule
+   * In dual-selector pattern, parent checkbox state is ALWAYS computed based on child selection
+   * Parent state = 'checked' ONLY if ALL children are selected
+   * This ensures parent.state === child.state for all children of that parent
+   */
+  private enforceStateMatchingRule(): void {
+    if (!this.isDualSelectorMode() || !this.selectionHelper) {
+      return;
+    }
+
+    // For dual mode, verify that parent checkbox state accurately reflects child selections
+    const parents = this.selectionHelper.getUniqueParents();
+
+    parents.forEach(parentValue => {
+      const parentState = this.selectionHelper!.getParentState(parentValue);
+      const children = this.selectionHelper!.getChildren(parentValue);
+
+      // Verify state matching: parent is checked only if ALL children are selected
+      const allChildrenSelected = children.every(child => this.selectionHelper!.isSelected(child));
+      const expectedState = allChildrenSelected ? 'checked' : 'unchecked';
+
+      if (parentState !== expectedState) {
+        console.warn('[BaseTable] State mismatch detected for parent:', parentValue, 'Expected:', expectedState, 'Got:', parentState);
+      }
+    });
+
+    console.log('[BaseTable] State matching rule enforced for', parents.length, 'parents');
+  }
+
+  /**
    * CHECKBOX: Toggle parent (affects all children)
    *
-   * BEHAVIOR (per CHECKBOX-BEHAVIOR.md):
+   * PHASE 4 BEHAVIOR (Binary-only, per PHASE-4-PLAN.md):
    * - If parent is CHECKED (all children selected) → Click UNCHECKS all children
-   * - If parent is UNCHECKED or INDETERMINATE → Click CHECKS all children
+   * - If parent is UNCHECKED (less than all selected) → Click CHECKS all children
+   *
+   * PHASE 4 STEP 4.4: State Matching Rule
+   * When parent checkbox state changes, child selections are updated to match.
+   * Parent state always reflects the true selection state of all children.
    */
   onParentCheckboxChange(parentValue: string, event: any): void {
     console.log('[BaseTable] onParentCheckboxChange:', parentValue, 'event:', event);
@@ -440,11 +572,14 @@ export class BaseTableComponent implements OnInit, OnChanges, OnDestroy {
 
     // toggleParent already implements the correct behavior:
     // - checked → deselect all
-    // - unchecked or indeterminate → select all
+    // - unchecked → select all (applies to both "none selected" and "some selected" cases)
     this.selectionHelper.toggleParent(parentValue);
 
     // Update parent checkbox state cache
     this.updateParentCheckboxStateCache();
+
+    // PHASE 4: Enforce state matching rule after change
+    this.enforceStateMatchingRule();
 
     // Emit selection change event
     this.emitSelectionChange();
@@ -465,6 +600,89 @@ export class BaseTableComponent implements OnInit, OnChanges, OnDestroy {
 
     console.log('[BaseTable] Emitting selectionChange:', event.selectedKeys.size, 'items');
     this.selectionChange.emit(event);
+
+    // PHASE 4 STEP 4.5: Update URL with selection state
+    if (this.config.selection?.hierarchical?.enabled) {
+      this.updateSelectionInUrl();
+    }
+  }
+
+  /**
+   * PHASE 4 STEP 4.5: Update URL with current selection state
+   * Serializes selected keys to URL parameter format: "parent|child,parent|child,..."
+   * Uses query parameter name from config (default: 'selected')
+   */
+  private updateSelectionInUrl(): void {
+    if (!this.selectionHelper) {
+      return;
+    }
+
+    const selectedKeys = this.selectionHelper.getSelectedKeys();
+    const urlParam = this.config.selection?.urlParam || 'selected';
+
+    if (selectedKeys.size === 0) {
+      // Clear selection from URL if no items selected
+      this.urlState.setQueryParams({ [urlParam]: undefined }).subscribe(
+        (success) => {
+          if (success) {
+            console.log('[BaseTable] Cleared selection from URL');
+          }
+        }
+      );
+    } else {
+      // Serialize selection to URL format: "parent|child,parent|child,..."
+      const selectedString = Array.from(selectedKeys).join(',');
+      this.urlState.setQueryParams({ [urlParam]: selectedString }).subscribe(
+        (success) => {
+          if (success) {
+            console.log('[BaseTable] Updated URL with selection:', urlParam, '=', selectedString);
+          }
+        }
+      );
+    }
+  }
+
+  /**
+   * PHASE 4 STEP 4.5: Deserialize selection from URL parameter
+   * Parses URL format "parent|child,parent|child,..." to Set<string>
+   * Returns empty Set if no selection in URL
+   */
+  private deserializeSelectionFromUrl(): Set<string> {
+    const urlParam = this.config.selection?.urlParam || 'selected';
+    const selectedParam = this.urlState.getQueryParamSnapshot(urlParam);
+
+    if (!selectedParam) {
+      return new Set();
+    }
+
+    // Parse comma-separated list of "parent|child" keys
+    const keys = selectedParam
+      .split(',')
+      .map(k => k.trim())
+      .filter(k => k.length > 0 && k.includes('|'));
+
+    console.log('[BaseTable] Deserialized selection from URL:', keys.length, 'items');
+    return new Set(keys);
+  }
+
+  /**
+   * PHASE 4 STEP 4.5: Hydrate selection from URL on initialization
+   * Called after data is loaded to restore selection from URL parameters
+   */
+  private hydrateSelectionFromUrl(): void {
+    if (!this.config.selection?.hierarchical?.enabled) {
+      return;
+    }
+
+    const selectedKeys = this.deserializeSelectionFromUrl();
+
+    if (selectedKeys.size === 0) {
+      console.log('[BaseTable] No selection in URL');
+      return;
+    }
+
+    console.log('[BaseTable] Hydrating selection from URL:', selectedKeys);
+    this.hydrateSelection(selectedKeys);
   }
 
   /**
@@ -988,5 +1206,43 @@ export class BaseTableComponent implements OnInit, OnChanges, OnDestroy {
       return [];
     }
     return this.selectionHelper.getChildren(parentValue);
+  }
+
+  /**
+   * PHASE 4 STEP 4.2: Get hierarchical data structure for single-selector pattern
+   * Returns array of parent values for rendering parent rows
+   * Children rows are rendered under each parent using getChildrenForParent()
+   */
+  getHierarchicalParents(): string[] {
+    if (!this.isSingleSelectorMode() || !this.selectionHelper) {
+      return [];
+    }
+    return this.selectionHelper.getUniqueParents();
+  }
+
+  /**
+   * PHASE 4 STEP 4.2: Check if row is a parent row (used in single-selector template)
+   * Parent rows show parent checkbox and parent value, but no child values
+   */
+  isParentRow(row: any): boolean {
+    if (!this.isSingleSelectorMode() || !this.config.selection?.hierarchical?.enabled) {
+      return false;
+    }
+    const childKey = this.config.selection.hierarchical.childKey;
+    // A parent row has no child value (or child value is undefined/empty)
+    return !row[childKey];
+  }
+
+  /**
+   * PHASE 4 STEP 4.2: Check if row is a child row (used in single-selector template)
+   * Child rows show child checkbox and child value
+   */
+  isChildRow(row: any): boolean {
+    if (!this.isSingleSelectorMode() || !this.config.selection?.hierarchical?.enabled) {
+      return false;
+    }
+    const childKey = this.config.selection.hierarchical.childKey;
+    // A child row has a child value defined
+    return row[childKey] !== undefined && row[childKey] !== null && row[childKey] !== '';
   }
 }

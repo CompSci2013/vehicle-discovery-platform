@@ -13,9 +13,14 @@
 
 /**
  * CHECKBOX STATE
- * The three possible states for a checkbox
+ * Binary states only - NO indeterminate/partial states
+ *
+ * PHASE 4 REQUIREMENT:
+ * Parent state = child state (always binary)
+ * Checked: ALL children selected
+ * Unchecked: Less than ALL children selected (including none)
  */
-export type CheckboxState = 'unchecked' | 'indeterminate' | 'checked';
+export type CheckboxState = 'unchecked' | 'checked';
 
 /**
  * SELECTION EVENT
@@ -79,7 +84,12 @@ export class HierarchicalSelectionHelper<T = any> {
   }
 
   /**
-   * Get parent checkbox state (unchecked/indeterminate/checked)
+   * Get parent checkbox state (binary only - checked or unchecked)
+   *
+   * PHASE 4 REQUIREMENT (No tri-state/indeterminate):
+   * Checked: ALL children selected
+   * Unchecked: Less than ALL children selected (including none)
+   *
    * This is the core algorithm from PICKER-CHECKBOX-BEHAVIOR.md
    */
   getParentState(parentValue: string): CheckboxState {
@@ -96,9 +106,9 @@ export class HierarchicalSelectionHelper<T = any> {
     console.log(`[Helper] Selected children:`, selectedChildren);
     console.log(`[Helper] All selections:`, Object.fromEntries(this.selections));
 
-    if (selectedCount === 0) return 'unchecked';
+    // Binary state: checked only if ALL children selected
     if (selectedCount === allChildren.length) return 'checked';
-    return 'indeterminate';  // Some but not all
+    return 'unchecked';  // Any other state (none or some) = unchecked
   }
 
   /**
