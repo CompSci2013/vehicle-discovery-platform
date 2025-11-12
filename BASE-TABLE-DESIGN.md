@@ -1,264 +1,337 @@
-# VDP BaseTable Design - Validation & Comparison
+# VDP BaseTable Design - Feature Parity with autos-prime-ng
 
 **Document Date:** November 12, 2025
-**Status:** Design Review - Single-Component vs Two-Component Architecture
-**Scope:** vdp's BaseTable vs autos-prime-ng's BaseDataTable + ColumnManager
+**Status:** CORRECTED - Design for Feature Parity
+**Scope:** vdp's path to achieving feature parity with apn
 
 ---
 
-## Executive Summary
+## ⚠️ CORRECTION: Understanding Hierarchical Selection
 
-vdp has implemented a **single-component, configuration-driven table architecture** (BaseTable) that differs from apn's **two-component separation-of-concerns approach** (BaseDataTable + ColumnManager).
+**Previous Misconception:** Hierarchical selection = tri-state parent checkboxes with indeterminate states
+**ACTUAL PATTERN:** Two configurable picker types with parent/child checkboxes on same row
 
-**Key Finding:** vdp's BaseTable is **purpose-built for picker/selector tables** and does NOT provide feature parity with apn's general-purpose data table approach. Both are valid but solve different problems.
-
----
-
-## Architecture Comparison
-
-### autos-prime-ng: Two-Component Approach
-
-```
-ResultsTableComponent (Container)
-├── BaseDataTable (1,062 lines TS)
-│   ├── Data fetching (server/client)
-│   ├── Pagination
-│   ├── Sorting (server/client)
-│   ├── Filtering (server/client)
-│   ├── Row expansion
-│   ├── Column ordering
-│   └── Persistence (localStorage)
-│
-└── ColumnManager (219 lines TS)
-    ├── Sidebar UI with PickList
-    ├── Column visibility toggle
-    ├── Drag-drop reordering
-    ├── Column search/filter
-    ├── Reset to defaults
-    └── Dependency validation
-```
-
-**Total: ~1,600 lines of code**
-
-**Philosophy:** Separation of Concerns
-- BaseDataTable focuses on data display
-- ColumnManager focuses on column UX
-- Clean responsibilities, but more complex for simple use cases
-
-### vdp: Single-Component Approach
-
-```
-Picker/Table Using Component (Container)
-└── BaseTable (630 lines TS)
-    ├── Configuration-driven rendering
-    ├── Selection logic (tri-state)
-    ├── Hierarchical parent-child grouping
-    ├── Row expansion (config-based)
-    ├── Client-side sorting
-    ├── Client-side filtering
-    ├── Basic pagination
-    └── No persistence
-```
-
-**Total: ~850 lines of code**
-
-**Philosophy:** Configuration Over Code
-- All variants (simple, hierarchical, expandable) share one component
-- Configuration object determines behavior
-- Simpler mental model but limited flexibility
+Key corrections:
+- ✅ KEEP hierarchical selection (required for pickers)
+- ✅ Single-selector picker: Parent checkbox only
+- ✅ Dual-selector picker: Parent AND child checkboxes on same row
+- ✅ State matching: Parent state = child state when same row id
+- ✅ NOT tri-state (parent indeterminate) - states always match
+- ✅ ADDING ColumnManager component (for feature parity)
+- ✅ Server-side pagination needed NOW
 
 ---
 
-## Feature Comparison Matrix
+## Architecture: Configuration-Driven with Component Separation
 
-| Feature | autos-prime-ng | vdp | Notes |
-|---------|---|---|---|
-| **Data Source** | | | |
-| Server-side fetch | ✅ Yes (TableDataSource) | ❌ No | apn uses DataSource pattern; vdp is static-data only |
-| Pre-fetched data | ✅ Yes (data input) | ✅ Yes (config.data) | Both support static arrays |
-| URL-first state | ✅ Yes | ❌ No | apn has built-in URL param handling |
-| API integration | ✅ Full (async/pagination) | ⚠️ Stubbed (loadData TODO) | vdp needs API work |
-| **Sorting** | | | |
-| Client-side | ✅ Yes | ✅ Yes (recently added) | Both support now |
-| Server-side | ✅ Yes | ❌ No | apn can delegate to backend |
-| Multiple columns | ✅ Yes | ❌ Single column only | vdp only supports one sort field |
-| UI indicators | ✅ PrimeNG headers | ✅ Sort icons | Both show direction |
-| **Filtering** | | | |
-| Client-side | ✅ Yes | ✅ Yes (recently added) | Both support now |
-| Server-side | ✅ Yes | ❌ No | apn can delegate to backend |
-| Multiple columns | ✅ Yes (AND logic) | ✅ Yes (AND logic) | Both support multi-column filters |
-| UI controls | ✅ Inline inputs | ✅ Row above table | Different UX but same capability |
-| **Pagination** | | | |
-| Server-side | ✅ Yes (with API) | ❌ No | apn uses backend pagination |
-| Client-side | ✅ Yes | ⚠️ Stubbed | vdp has pagination state but not implemented |
-| Page size options | ✅ Yes | ⚠️ Config only | vdp hardcoded |
-| **Columns** | | | |
-| Visibility toggle | ✅ User-managed (ColumnManager) | ⚠️ Config-only | apn lets users hide columns; vdp is static |
-| Reordering | ✅ Drag-drop (ColumnManager) | ❌ No | apn supports; vdp doesn't |
-| Lock columns | ⚠️ Implicit | ❌ No | apn supports; vdp doesn't |
-| Custom templates | ✅ Via @ContentChild | ❌ No | apn extensible; vdp is not |
-| **Selection** | | | |
-| Checkboxes | ✅ Yes | ✅ Yes | Both support |
-| Single selection | ✅ Yes | ❌ No | apn via mode='single' |
-| Multi selection | ✅ Yes | ✅ Yes | Both support |
-| Hierarchical | ❌ No | ✅ Yes | **vdp specialty** |
-| Tri-state (parent) | ❌ No | ✅ Yes | **vdp specialty** - Only vdp does this |
-| Parent-child logic | ❌ No | ✅ Built-in | **vdp specialty** - Parent affects children |
-| **Row Features** | | | |
-| Expansion | ✅ Yes (@ContentChild) | ✅ Static (config.data) | apn more flexible; vdp config-based |
-| Nested tables | ✅ Yes (via templates) | ⚠️ Basic | apn supports complex nesting |
-| **Persistence** | | | |
-| localStorage | ✅ Yes (column prefs) | ❌ No | apn persists visibility/order |
-| API state | ✅ Via DataSource | ❌ No | apn can persist server-side |
-| **Styling** | | | |
-| PrimeNG p-table | ✅ Yes | ⚠️ Hybrid | apn uses PrimeNG fully; vdp mixes PrimeNG + HTML |
-| Responsive | ✅ Yes | ✅ Yes | Both mobile-friendly |
-| Striped rows | ✅ Yes | ✅ Yes | Both support |
-| Hoverable | ✅ Yes | ✅ Yes | Both support |
-| **Code Size** | | | |
-| Component TS | 1,062 lines | 630 lines | vdp is 60% of apn |
-| Component HTML | 233 lines | 219 lines | Comparable |
-| Manager TS | 219 lines | 0 lines | vdp avoids separation |
-| Manager HTML | 84 lines | 0 lines | vdp avoids separation |
-| **Total** | ~1,600 lines | ~850 lines | vdp is ~47% of apn size |
+vdp will adopt the **best of both approaches**:
+
+### Configuration-Driven Design (from vdp BaseTable)
+- ✅ Keep configuration objects for table behavior
+- ✅ All variants (simple, expandable, results) via config
+- ✅ Code-driven (not visual builders)
+
+### Component Separation (from apn BaseDataTable + ColumnManager)
+- ✅ BaseTable for data display and interactions
+- ✅ ColumnManager for column visibility/reordering UI
+- ✅ Clear separation of concerns
 
 ---
 
-## Design Validation
+## Required Components for Feature Parity
 
-### Strengths of vdp's BaseTable
+### 1. BaseTable (Configuration-Driven)
+**Status:** Partially complete, needs enhancements
+**Size:** Currently 630 lines TS, will grow to ~1,000+
 
-✅ **Configuration-driven** - Reduces code duplication
-✅ **Specialized for pickers** - Excels at hierarchical selection
-✅ **Simpler mental model** - One component for all table modes
-✅ **Tri-state checkboxes** - Unique feature not in apn
-✅ **Parent-child logic** - Automatic selection propagation
-✅ **Smaller codebase** - 47% of apn size
-✅ **URL-first ready** - Can integrate with UrlStateService
-✅ **Recent additions** - Sorting/filtering now implemented
-
-### Limitations of vdp's BaseTable
-
-❌ **No server-side support** - Data must be pre-fetched
-❌ **No column management UI** - Can't toggle visibility/reorder
-❌ **No persistence** - Column prefs lost on refresh
-❌ **No custom templates** - Can't extend cell rendering
-❌ **Single sort field** - Can't multi-column sort
-❌ **Client-side only** - Filtering/sorting not delegated to backend
-❌ **No pagination implementation** - Component has state but not working
-❌ **Configuration coupling** - Changes require code edits
-
-### When vdp's BaseTable is Appropriate
-
-**✅ USE vdp BaseTable when:**
-- Building picker/selector tables (e.g., manufacturer-model picker)
-- Need hierarchical parent-child selection
-- Tri-state checkbox behavior required
-- Static/pre-fetched data only
-- Selection is the primary interaction
-- Simplicity is a priority
-- Users don't need column customization
-
-**❌ DON'T use vdp BaseTable for:**
-- General-purpose data tables (use apn BaseDataTable instead)
-- Large datasets requiring server-side pagination
-- Tables needing user-controlled column visibility
-- Complex expandable rows with custom rendering
-- Results tables with sorting/filtering on backend
-- When column reordering is important
-
----
-
-## Implementation Completeness
-
-### Core Features Status
-
-| Feature | Status | Completeness | Notes |
-|---------|--------|---|---|
-| **Selection** | ✅ Complete | 100% | Hierarchical, tri-state, all working |
-| **Sorting** | ✅ Complete | 100% | Client-side, single field, recently added |
-| **Filtering** | ✅ Complete | 100% | Client-side, multi-column, recently added |
-| **Hierarchical rendering** | ✅ Complete | 100% | Two display modes (single/dual checkbox) |
-| **Row expansion** | ✅ Complete | 100% | Static data from config |
-| **Configuration-driven rendering** | ✅ Complete | 100% | All modes via config |
-| **Pagination** | ⚠️ Partial | 40% | State exists but not wired to data |
-| **Server-side fetch** | ❌ Missing | 0% | loadData() has TODO comment |
-| **Column management UI** | ❌ Missing | 0% | No visibility/reorder feature |
-| **Persistence** | ❌ Missing | 0% | No localStorage support |
-| **Custom templates** | ❌ Missing | 0% | No @ContentChild extensibility |
-
----
-
-## Migration Recommendation
-
-### Current Approach is Correct
-
-**For vdp, the single-component BaseTable is the right choice because:**
-
-1. **Problem domain is different** - vdp focuses on vehicle pickers, not general data tables
-2. **Hierarchical selection is unique** - This is not in apn's scope
-3. **Simpler is better** - Configuration-driven design serves vdp's needs
-4. **Code size is reasonable** - 850 lines is maintainable
-5. **Feature parity with apn unnecessary** - Each solves different problems
-
-### NO Need to Port BaseDataTable + ColumnManager
-
-❌ **Don't try to port apn's two-component approach to vdp because:**
-- vdp doesn't need column management UI
-- vdp doesn't need server-side pagination (yet)
-- vdp's hierarchical selection is purpose-built, not in apn
-- It would be massive scope creep (1,600+ lines)
-- Configuration-driven design works well for vdp's use case
-
-### Recommended Development Path
-
-**Phase 1 (Complete):** ✅ Core picker functionality
-- Hierarchical selection
-- Tri-state checkboxes
+**Current Features** ✅
 - Configuration-driven rendering
-- Client-side sorting
-- Client-side filtering
+- Client-side sorting (recently added)
+- Client-side filtering (recently added)
+- Basic pagination state
+- Simple row expansion (static data)
 
-**Phase 2 (When needed):** Server-side integration
-- Complete loadData() API fetching
-- Wire pagination to backend
-- Add RequestCoordinator integration
-- Implement URL-first state management
+**Missing Features** ❌
+- Server-side pagination
+- Server-side sorting/filtering
+- API data fetching integration
 
-**Phase 3 (Future):** Enhanced features
-- Column visibility toggle (simple version without PickList)
-- Basic persistence (localStorage for preferences)
-- Custom cell templates (if needed)
+**Hierarchical Selection Patterns (KEEP, but clarify)** ✅
+- Single-selector picker: Parent checkbox only (configurable)
+- Dual-selector picker: Parent AND child on same row (configurable)
+- State matching: When parent and child share same row id, states must match
+- NOT tri-state: Parent state = child state (no indeterminate/partial states)
+
+### 2. ColumnManager Component (NEW)
+**Status:** Does not exist in vdp, needs to be ported/created
+**Size:** ~300 lines (TS + HTML)
+
+**Features Required** ✅
+- Sidebar UI with PrimeNG PickList
+- Column visibility toggle
+- Drag-drop column reordering
+- Column search/filter
+- Reset to defaults
+- Column dependency validation
+- localStorage persistence
+
+**Reference:** Already exists in apn at `/autos-prime-ng/frontend/src/app/shared/components/column-manager/`
+
+---
+
+## Feature Comparison Matrix (Target State)
+
+| Feature | apn | Current vdp | Target vdp | Priority |
+|---------|-----|-----|---|---|
+| **Data Source** | | | | |
+| Server-side fetch | ✅ | ❌ | ✅ | P0 |
+| Pre-fetched data | ✅ | ✅ | ✅ | ✅ |
+| API integration | ✅ | Stubbed | ✅ | P0 |
+| **Sorting** | | | | |
+| Client-side | ✅ | ✅ | ✅ | ✅ |
+| Server-side | ✅ | ❌ | ✅ | P0 |
+| Multiple columns | ✅ | ❌ | ✅ | P1 |
+| **Filtering** | | | | |
+| Client-side | ✅ | ✅ | ✅ | ✅ |
+| Server-side | ✅ | ❌ | ✅ | P0 |
+| Multiple columns | ✅ | ✅ | ✅ | ✅ |
+| **Pagination** | | | | |
+| Server-side | ✅ | ❌ | ✅ | P0 |
+| Client-side | ✅ | Partial | ✅ | P0 |
+| Page size options | ✅ | Hardcoded | ✅ | P1 |
+| **Columns** | | | | |
+| Visibility toggle | ✅ | Config-only | ✅ ColumnManager | P0 |
+| Reordering | ✅ Drag-drop | ❌ | ✅ ColumnManager | P0 |
+| Lock columns | ✅ | ❌ | ✅ | P1 |
+| Custom templates | ✅ | ❌ | ✅ | P1 |
+| **Selection** | | | | |
+| Checkboxes | ✅ | ✅ Hierarchical | ✅ Hierarchical | ✅ |
+| Single-selector | ✅ | ✅ | ✅ | ✅ |
+| Dual-selector | ⚠️ | ✅ | ✅ | ✅ |
+| State matching | N/A | ✅ | ✅ Parent=Child | ✅ |
+| **Row Features** | | | | |
+| Expansion | ✅ | ✅ Static | ✅ Sub-tables | P0 |
+| Nested tables | ✅ | Basic | ✅ Full | P1 |
+| **Persistence** | | | | |
+| localStorage | ✅ | ❌ | ✅ ColumnManager | P0 |
+| API state | ✅ | ❌ | ✅ | P1 |
+
+---
+
+## Implementation Roadmap
+
+### Phase 1: Foundation (P0 Priority)
+**Remove hierarchical selection, add server-side support**
+
+1. **Remove from BaseTable** ❌
+   - Delete hierarchical parent-child selection logic
+   - Delete tri-state checkbox code
+   - Delete dual checkbox display mode
+   - Simplify to standard single/multi checkbox selection
+
+2. **Enhance BaseTable** ✅
+   - Complete server-side pagination
+   - Add server-side sort/filter support
+   - Integrate RequestCoordinator
+   - Wire API data fetching
+   - Support sub-table expansion (not hierarchical)
+
+3. **Create ColumnManager** ✅
+   - Port from apn or create vdp version
+   - Sidebar UI with PickList
+   - Visibility/reordering management
+   - localStorage persistence
+   - Integration with BaseTable
+
+### Phase 2: Enhancement (P1 Priority)
+**Polish and advanced features**
+
+1. **Advanced Sorting**
+   - Multi-column sort support
+   - Sort direction indicators
+
+2. **Custom Templates**
+   - @ContentChild support
+   - Custom cell rendering
+   - Custom expansion templates
+
+3. **Advanced Features**
+   - Column locking
+   - Column grouping
+   - Advanced filtering UI
+
+### Phase 3: Integration (P2 Priority)
+**URL-first and persistence**
+
+1. **URL-first State Management**
+   - Integrate with UrlStateService
+   - Persist sort/filter in URL
+   - Hydrate from URL on load
+
+2. **Server-side Persistence**
+   - Save user preferences to backend
+   - Load preferences on app init
+
+---
+
+## What TO Do & What NOT to Do
+
+### ✅ KEEP Hierarchical Selection
+- vdp pickers use two configurable patterns:
+  - Single-selector: Parent checkbox only
+  - Dual-selector: Parent AND child checkboxes on same row
+- State matching rule: When parent and child share same row id, their states MUST match
+- This is NOT tri-state (no indeterminate/partial states)
+
+### ✅ ADD Column Management
+- Must port/create ColumnManager
+- Required for feature parity
+- Users need to control visibility/order
+
+### ✅ Implement Server-Side Features NOW
+- Server-side pagination needed NOW
+- Server-side sort/filter needed NOW
+- These are P0, not future work
+
+### ✅ Use Two-Component Architecture
+- Need two components: BaseTable + ColumnManager
+- Separation of concerns is important
+- Configuration-driven design stays (vdp advantage)
+- But components need clear responsibilities
+
+---
+
+## Configuration-Driven Design (Keeping This)
+
+Keep the config-driven approach for:
+- **Table modes** (simple, expandable, selector)
+- **Column definitions** (sortable, filterable, visible, type)
+- **Selection config** (enabled, mode, URL persistence)
+- **Pagination config** (pageSize, options, API endpoint)
+- **Expansion config** (sub-table columns, API endpoint)
+
+This is vdp's strength vs apn's @Input/@Output approach.
+
+---
+
+## Files to Create/Modify
+
+### Create
+```
+frontend/src/app/shared/components/column-manager/
+├── column-manager.component.ts    (Port from apn or new)
+├── column-manager.component.html  (Port from apn or new)
+├── column-manager.component.scss  (Port from apn or new)
+└── column-manager.component.spec.ts
+```
+
+### Modify BaseTable
+```
+frontend/src/app/shared/components/base-table/
+├── base-table.component.ts       (Remove hierarchical, add server-side)
+├── base-table.component.html     (Simplify, add ColumnManager)
+└── base-table.component.scss     (Keep sort/filter styles)
+```
+
+### Create/Update Models
+```
+frontend/src/app/shared/models/
+├── table-config.model.ts         (Already exists, update as needed)
+└── table-data-source.ts          (Port from apn or create)
+```
+
+---
+
+## Architectural Differences from apn (By Design)
+
+### vdp Uses Config, apn Uses @Inputs
+**vdp (Keep This):**
+```typescript
+// One config object
+const tableConfig = {
+  id: 'results-table',
+  columns: [...],
+  selection: {...},
+  pagination: {...},
+  api: {...}
+}
+
+// One component input
+<app-base-table [config]="tableConfig"></app-base-table>
+```
+
+**apn (Don't Copy):**
+```typescript
+// Multiple @Inputs
+<app-base-data-table
+  [columns]="columns"
+  [dataSource]="dataSource"
+  [queryParams]="queryParams"
+  [expandable]="true"
+  [showColumnManagement]="true"
+  ...
+></app-base-data-table>
+```
+
+This is actually an advantage for vdp - cleaner API, easier to compose.
+
+---
+
+## Summary of Changes
+
+### DO ✅
+✅ Keep configuration-driven design (vdp's advantage)
+✅ Keep hierarchical selection (required for pickers)
+✅ Support single-selector picker (parent checkbox only)
+✅ Support dual-selector picker (parent + child on same row, states match)
+✅ Add ColumnManager component (required for feature parity)
+✅ Add server-side pagination (needed now)
+✅ Add server-side sort/filter (needed now)
+✅ Keep BaseTable and ColumnManager separate
+✅ Integrate RequestCoordinator
+✅ Support sub-table expansion (not hierarchical parents)
+
+### DON'T ❌
+❌ Postpone server-side features
+❌ Avoid column management UI
+❌ Try to match apn's @Input-heavy API (keep config approach)
+❌ Use tri-state (parent indeterminate) - states must match parent=child
+❌ Remove hierarchical selection patterns
+
+---
+
+## Success Criteria
+
+vdp will have achieved feature parity when:
+- [ ] ColumnManager component exists and works
+- [ ] BaseTable supports server-side pagination
+- [ ] BaseTable supports server-side sort/filter
+- [ ] Single-selector picker works (parent checkbox only)
+- [ ] Dual-selector picker works (parent + child on same row, states match)
+- [ ] Parent state = child state constraint enforced (not tri-state)
+- [ ] Column visibility/reordering works
+- [ ] Preferences persist to localStorage
+- [ ] Configuration-driven design maintained
+- [ ] Both pickers and results tables work with same components
 
 ---
 
 ## Conclusion
 
-### Design Decision: ✅ VALIDATED
+vdp's **configuration-driven approach is superior** to apn's @Input-heavy API. Maintain that advantage while achieving feature parity:
 
-vdp's **BaseTable single-component architecture is the correct design choice** for vdp's specific requirements:
+**Keep:**
+- Configuration-driven design (vdp advantage)
+- Hierarchical selection patterns (required for pickers)
+- Two-component separation (BaseTable + ColumnManager)
 
-- **Purpose-built** for picker/selector tables
-- **No feature parity needed** with apn's general-purpose table
-- **Optimized** for hierarchical parent-child selection
-- **Simpler** than apn's two-component approach
-- **Adequate** for current and foreseeable needs
+**Add:**
+- ColumnManager component (feature parity)
+- Server-side pagination/sort/filter (P0 priority)
 
-The architecture matches the principle: **"Simple solutions for simple problems, complex solutions for complex problems."**
+**Clarify:**
+- Single-selector picker: Parent checkbox only
+- Dual-selector picker: Parent + child on same row with state matching
+- Parent state = child state (not tri-state/indeterminate)
 
-### No Action Required
-
-- ❌ Don't port BaseDataTable + ColumnManager to vdp
-- ✅ Keep BaseTable as-is
-- ✅ Enhance as needed (Phase 2: server-side, Phase 3: UI polish)
-- ✅ Use UrlStateService for URL-first integration
-
----
-
-## Documentation References
-
-For detailed analysis, see:
-- `frontend/src/app/shared/components/TABLE_ARCHITECTURE_README.md` - Navigation guide
-- `frontend/src/app/shared/components/TABLE_ARCHITECTURE_QUICK_REFERENCE.md` - Visual overview
-- `frontend/src/app/shared/components/TABLE_ARCHITECTURE_ANALYSIS.md` - Deep technical analysis
-- `frontend/src/app/shared/components/TABLE_ARCHITECTURE_IMPLEMENTATION_CHECKLIST.md` - Action items
+Target: Feature parity with apn while maintaining vdp's superior configuration-driven architecture.
