@@ -30,7 +30,7 @@ export const PICKER_TABLE_DEMO_SINGLE_CONFIG: TableConfig = {
       sortable: true,        // Enable sort control
       filterable: true,      // Enable filter input
       visible: true,
-      width: '200px'
+      width: '80px'
     },
     {
       key: 'model',
