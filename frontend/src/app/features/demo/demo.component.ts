@@ -4,6 +4,8 @@ import { takeUntil, take } from 'rxjs/operators';
 import { TableConfig, SelectionChangeEvent } from '../../shared/models';
 import { DemoApiService, Manufacturer } from '../../demo';
 import { UrlStateService } from '../../core/services/url-state.service';
+import { PICKER_TABLE_DEMO_SINGLE_CONFIG } from '../../config/tables/picker-table-demo-single.config';
+import { PICKER_TABLE_DEMO_DUAL_CONFIG } from '../../config/tables/picker-table-demo-dual.config';
 
 /**
  * DEMO PAGE COMPONENT
@@ -199,54 +201,24 @@ export class DemoComponent implements OnInit, OnDestroy {
 
   /**
    * Initialize both picker table configurations
-   * Demonstrates single vs dual checkbox modes
+   * Uses configuration files (PICKER_TABLE_DEMO_SINGLE_CONFIG and PICKER_TABLE_DEMO_DUAL_CONFIG)
+   * to demonstrate configuration-driven architecture per GOALS.md
    */
   private initializePickerConfigs(): void {
-    // SINGLE CHECKBOX MODE - One selection column (left side)
+    // SINGLE CHECKBOX MODE - Load from configuration file
     this.pickerConfigSingle = {
-      id: 'manufacturer-model-picker-single',
-      columns: [
-        {
-          key: 'manufacturer',
-          label: 'Manufacturer',
-          type: 'text',
-          sortable: false,
-          visible: true,
-          width: '200px'
-        },
-        {
-          key: 'model',
-          label: 'Model',
-          type: 'text',
-          sortable: false,
-          visible: true,
-          width: '200px'
-        },
-        {
-          key: 'count',
-          label: 'Vehicles',
-          type: 'number',
-          sortable: false,
-          visible: true,
-          width: '100px'
-        }
-      ],
+      ...PICKER_TABLE_DEMO_SINGLE_CONFIG,
+      data: this.manufacturerModelData,
       selection: {
-        enabled: true,
-        mode: 'multi',
-        displayMode: 'single',  // One selection column
-        hierarchical: {
-          enabled: true,
-          parentKey: 'manufacturer',
-          childKey: 'model'
-        },
-        applyButton: {
-          enabled: true,
-          text: 'Apply Selection',
-          position: 'both'
-        },
+        enabled: PICKER_TABLE_DEMO_SINGLE_CONFIG.selection?.enabled ?? true,
+        mode: PICKER_TABLE_DEMO_SINGLE_CONFIG.selection?.mode ?? 'multi',
+        displayMode: PICKER_TABLE_DEMO_SINGLE_CONFIG.selection?.displayMode,
+        hierarchical: PICKER_TABLE_DEMO_SINGLE_CONFIG.selection?.hierarchical,
+        applyButton: PICKER_TABLE_DEMO_SINGLE_CONFIG.selection?.applyButton,
+        showCount: PICKER_TABLE_DEMO_SINGLE_CONFIG.selection?.showCount,
+        clearButton: PICKER_TABLE_DEMO_SINGLE_CONFIG.selection?.clearButton,
+        urlParam: PICKER_TABLE_DEMO_SINGLE_CONFIG.selection?.urlParam,
         // URL-first state management
-        urlParam: 'models-single',
         serializer: (items: any[]) => {
           // Convert items to URL format: "Ford:F-150,Ford:Mustang,Dodge:Durango"
           return items.map(item => `${item.manufacturer}:${item.model}`).join(',');
@@ -262,57 +234,23 @@ export class DemoComponent implements OnInit, OnDestroy {
           // Generate unique key: "manufacturer|model"
           return `${item.manufacturer}|${item.model}`;
         }
-      },
-      data: this.manufacturerModelData
+      }
     };
 
-    // DUAL CHECKBOX MODE - Two checkboxes embedded in data columns
+    // DUAL CHECKBOX MODE - Load from configuration file
     this.pickerConfigDual = {
-      id: 'manufacturer-model-picker-dual',
-      columns: [
-        {
-          key: 'manufacturer',
-          label: 'Manufacturer',
-          type: 'text',
-          sortable: false,
-          visible: true,
-          width: '250px'
-        },
-        {
-          key: 'model',
-          label: 'Model',
-          type: 'text',
-          sortable: false,
-          visible: true,
-          width: '250px'
-        },
-        {
-          key: 'count',
-          label: 'Vehicles',
-          type: 'number',
-          sortable: false,
-          visible: true,
-          width: '100px'
-        }
-      ],
+      ...PICKER_TABLE_DEMO_DUAL_CONFIG,
+      data: this.manufacturerModelData,
       selection: {
-        enabled: true,
-        mode: 'multi',
-        displayMode: 'dual',  // Two checkbox columns embedded
-        hierarchical: {
-          enabled: true,
-          parentKey: 'manufacturer',
-          childKey: 'model',
-          parentColumn: 0,  // Manufacturer checkbox in column 0
-          childColumn: 1    // Model checkbox in column 1
-        },
-        applyButton: {
-          enabled: true,
-          text: 'Apply Selection',
-          position: 'both'
-        },
+        enabled: PICKER_TABLE_DEMO_DUAL_CONFIG.selection?.enabled ?? true,
+        mode: PICKER_TABLE_DEMO_DUAL_CONFIG.selection?.mode ?? 'multi',
+        displayMode: PICKER_TABLE_DEMO_DUAL_CONFIG.selection?.displayMode,
+        hierarchical: PICKER_TABLE_DEMO_DUAL_CONFIG.selection?.hierarchical,
+        applyButton: PICKER_TABLE_DEMO_DUAL_CONFIG.selection?.applyButton,
+        showCount: PICKER_TABLE_DEMO_DUAL_CONFIG.selection?.showCount,
+        clearButton: PICKER_TABLE_DEMO_DUAL_CONFIG.selection?.clearButton,
+        urlParam: PICKER_TABLE_DEMO_DUAL_CONFIG.selection?.urlParam,
         // URL-first state management
-        urlParam: 'models-dual',
         serializer: (items: any[]) => {
           // Convert items to URL format: "Ford:F-150,Ford:Mustang,Dodge:Durango"
           return items.map(item => `${item.manufacturer}:${item.model}`).join(',');
@@ -328,8 +266,7 @@ export class DemoComponent implements OnInit, OnDestroy {
           // Generate unique key: "manufacturer|model"
           return `${item.manufacturer}|${item.model}`;
         }
-      },
-      data: this.manufacturerModelData
+      }
     };
   }
 
