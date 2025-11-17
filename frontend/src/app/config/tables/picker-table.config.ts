@@ -10,16 +10,28 @@
   - Binary checkboxes for models
   - Apply Selection button
   - Selection count display
+  - Configuration-driven API (references vehicle API config)
 
   USAGE:
   import { PICKER_TABLE_CONFIG } from './config/tables/picker-table.config';
   <app-base-table [config]="PICKER_TABLE_CONFIG"></app-base-table>
+
+  NOTE:
+  This configuration uses apiConfigRef to reference the vehicle API configuration.
+  The actual API endpoints are defined in src/app/config/api/vehicle-api.config.ts
 */
 
 import { TableConfig } from '../../shared/models/table-config.model';
 
 export const PICKER_TABLE_CONFIG: TableConfig = {
   id: 'manufacturer-model-picker',
+
+  // API CONFIGURATION REFERENCE
+  // This table fetches data from the vehicle API's manufacturerModelCounts endpoint
+  apiConfigRef: {
+    configId: 'vehicles',
+    endpointId: 'manufacturerModelCounts'
+  },
 
   // COLUMNS
   columns: [

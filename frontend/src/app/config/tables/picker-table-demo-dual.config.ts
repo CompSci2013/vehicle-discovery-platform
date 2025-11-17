@@ -10,16 +10,28 @@
  * - Sortable and filterable columns
  * - Apply Selection button with counts
  * - URL-first state management for selections
+ * - Configuration-driven API (references vehicle API config)
  *
  * ARCHITECTURE:
  * - Configuration-driven: All behavior defined here, no code changes needed
  * - Used by demo component for dual-mode variant
+ *
+ * NOTE:
+ * This configuration uses apiConfigRef to reference the vehicle API configuration.
+ * The actual API endpoints are defined in src/app/config/api/vehicle-api.config.ts
  */
 
 import { TableConfig } from '../../shared/models/table-config.model';
 
 export const PICKER_TABLE_DEMO_DUAL_CONFIG: TableConfig = {
   id: 'manufacturer-model-picker-dual',
+
+  // API CONFIGURATION REFERENCE
+  // This table fetches data from the vehicle API's manufacturerModelCounts endpoint
+  apiConfigRef: {
+    configId: 'vehicles',
+    endpointId: 'manufacturerModelCounts'
+  },
 
   // COLUMNS
   columns: [

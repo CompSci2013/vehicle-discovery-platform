@@ -7,8 +7,8 @@
   modern browser feature that allows simple pub/sub messaging.
 
   WHY WE NEED THIS:
-  The Workshop page allows users to "pop out" panels into separate windows.
-  Those separate windows need to stay synchronized with the main window:
+  Allows users to "pop out" panels into separate windows that stay synchronized
+  with the main window:
   - When user applies filters in main window, pop-out sees updated results
   - When user closes pop-out, main window restores the panel to the grid
   - When user navigates in main window, pop-out stays in sync
@@ -19,14 +19,39 @@
   3. All OTHER windows receive the message (sender doesn't receive own message)
   4. Each window handles messages according to message type
 
+  CONFIGURATION:
+  The channel name can be configured using the BROADCAST_CHANNEL_NAME injection token.
+  If not provided, defaults to 'app-broadcast-channel'.
+
   BROWSER SUPPORT:
   BroadcastChannel is supported in all modern browsers (Chrome 54+, Firefox 38+,
   Safari 15.4+). For older browsers, this service provides a fallback mechanism.
 */
 
-import { Injectable, OnDestroy } from '@angular/core';
+import { Injectable, OnDestroy, Optional, Inject, InjectionToken } from '@angular/core';
 import { Subject, Observable } from 'rxjs';
 import { filter } from 'rxjs/operators';
+
+/**
+ * BROADCAST CHANNEL NAME INJECTION TOKEN
+ *
+ * Use this token to configure the channel name at module level.
+ *
+ * @example
+ * ```typescript
+ * // In app.module.ts or app.config.ts
+ * providers: [
+ *   { provide: BROADCAST_CHANNEL_NAME, useValue: 'vehicle-discovery-channel' }
+ * ]
+ * ```
+ */
+export const BROADCAST_CHANNEL_NAME = new InjectionToken<string>(
+  'BROADCAST_CHANNEL_NAME',
+  {
+    providedIn: 'root',
+    factory: () => 'app-broadcast-channel' // Default channel name
+  }
+);
 
 /*
   MESSAGE STRUCTURE
@@ -91,13 +116,16 @@ export class BroadcastChannelService implements OnDestroy {
     CHANNEL NAME
 
     All windows must use the same channel name to communicate.
-    Using app-specific prefix prevents conflicts with other apps.
+    Can be configured via BROADCAST_CHANNEL_NAME injection token.
 
-    In production, you might include environment name:
-    - 'vehicle-discovery-dev' for development
-    - 'vehicle-discovery-prod' for production
+    Default: 'app-broadcast-channel'
+
+    To customize, provide in your module:
+    providers: [
+      { provide: BROADCAST_CHANNEL_NAME, useValue: 'your-custom-channel' }
+    ]
   */
-  private readonly CHANNEL_NAME = 'vehicle-discovery-channel';
+  private readonly channelName: string;
 
   /*
     BROADCAST CHANNEL INSTANCE
@@ -164,11 +192,19 @@ export class BroadcastChannelService implements OnDestroy {
     Runs once when Angular creates this service (first time it's injected).
 
     Steps:
-    1. Generate unique sender ID for this window
-    2. Initialize BroadcastChannel connection
-    3. Set up message listener
+    1. Inject the configured channel name (or use default)
+    2. Generate unique sender ID for this window
+    3. Initialize BroadcastChannel connection
+    4. Set up message listener
+
+    @param channelName - Injected channel name (configured via BROADCAST_CHANNEL_NAME token)
   */
-  constructor() {
+  constructor(
+    @Inject(BROADCAST_CHANNEL_NAME) channelName: string
+  ) {
+    // Set the channel name from injection or use default
+    this.channelName = channelName;
+
     // Generate unique ID for this window/tab
     this.senderId = this.generateSenderId();
 
@@ -231,7 +267,7 @@ export class BroadcastChannelService implements OnDestroy {
 
     try {
       // Create the BroadcastChannel
-      this.channel = new BroadcastChannel(this.CHANNEL_NAME);
+      this.channel = new BroadcastChannel(this.channelName);
 
       // Set up message listener
       this.channel.onmessage = (event: MessageEvent) => {
@@ -255,7 +291,7 @@ export class BroadcastChannelService implements OnDestroy {
         }
       };
 
-      console.log(`BroadcastChannelService: Channel "${this.CHANNEL_NAME}" initialized`);
+      console.log(`BroadcastChannelService: Channel "${this.channelName}" initialized`);
     } catch (error) {
       // BroadcastChannel not supported or initialization failed
       console.error('BroadcastChannelService: Failed to initialize channel', error);

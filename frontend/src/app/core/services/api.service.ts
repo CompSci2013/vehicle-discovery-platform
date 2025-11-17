@@ -1,300 +1,63 @@
 /*
-  API SERVICE
+  GENERIC API SERVICE
 
   PURPOSE:
-  This service handles all HTTP communication with the backend API.
-  It provides methods for fetching manufacturer-model data and vehicle search results.
+  This service provides a generic, configuration-driven HTTP client for backend APIs.
+  It does NOT know about specific data types (vehicles, products, etc.) - those are
+  defined in configuration objects at runtime.
 
   BACKEND API BASE URL:
   - Development: http://localhost:3000 (configured in environment.ts)
   - Production: /api (proxied through nginx, configured in environment.prod.ts)
 
-  WHY CENTRALIZED API SERVICE:
-  1. Single source of truth for API URLs
-  2. Consistent error handling across all API calls
-  3. Easy to add authentication/authorization headers later
-  4. Simplifies testing (mock this service instead of HTTP client)
-  5. Type safety with interfaces for request/response
+  WHY GENERIC:
+  1. Single service works for ANY domain (vehicles, products, users, etc.)
+  2. No hardcoded endpoints or data types
+  3. Configuration-driven via ApiConfig objects
+  4. Easy to extend for new domains without modifying this service
+  5. Type safety maintained through TypeScript generics
 
   ARCHITECTURE PATTERN:
-  This follows Angular's recommended "Service Layer" pattern where components
-  never make HTTP calls directly. Instead, they inject this service and call
-  its methods.
+  Components pass an ApiConfig object to methods, which defines the endpoints
+  and data transformations. This allows the same service to handle multiple
+  different backend APIs without any code changes.
+
+  USAGE EXAMPLE:
+  // Define configuration
+  const config: ApiConfig = {
+    id: 'vehicles',
+    endpoints: {
+      search: { url: '/search/vehicle-details', method: 'GET' }
+    }
+  };
+
+  // Use service
+  this.apiService.request<VehicleFilters, VehicleResponse>(
+    config,
+    'search',
+    { page: 1, size: 20 }
+  ).subscribe(data => ...);
 */
 
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpParams, HttpHeaders } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 
-// Import data models
-import {
-  ManufacturerModelCountsResponse,
-  Manufacturer
-} from '../../models/manufacturer-model.model';
+// Import configuration interfaces
+import { ApiConfig, ApiEndpointConfig } from './api-config.interface';
 
 // Import environment configuration
 import { environment } from '../../../environments/environment';
 
 /**
- * VEHICLE SEARCH FILTERS INTERFACE
+ * GENERIC API SERVICE CLASS
  *
- * Defines all possible filters that can be applied to vehicle search.
- * These correspond to URL query parameters and backend API parameters.
- *
- * All fields are optional because users might not apply any filters.
- */
-export interface VehicleSearchFilters {
-  /**
-   * SELECTED MODEL COMBINATIONS
-   * Comma-separated manufacturer:model pairs
-   * Example: "Ford:F-150,Chevrolet:Corvette"
-   */
-  models?: string;
-
-  /**
-   * PAGE NUMBER
-   * 1-indexed page number for pagination
-   * Default: 1
-   */
-  page?: number;
-
-  /**
-   * PAGE SIZE
-   * Number of results per page
-   * Options: 10, 20, 50, 100
-   * Default: 20
-   */
-  size?: number;
-
-  /**
-   * MANUFACTURER FILTER
-   * Filter results to specific manufacturer
-   * Example: "Ford"
-   */
-  manufacturer?: string;
-
-  /**
-   * MODEL FILTER
-   * Filter results to specific model
-   * Example: "F-150"
-   */
-  model?: string;
-
-  /**
-   * YEAR RANGE - MINIMUM
-   * Minimum year to include in results
-   * Example: 2015
-   */
-  yearMin?: number;
-
-  /**
-   * YEAR RANGE - MAXIMUM
-   * Maximum year to include in results
-   * Example: 2024
-   */
-  yearMax?: number;
-
-  /**
-   * BODY CLASS FILTER
-   * Filter by vehicle body style
-   * Examples: "Pickup", "Sedan", "SUV", "Coupe"
-   */
-  bodyClass?: string;
-
-  /**
-   * DATA SOURCE FILTER
-   * Filter by original data source
-   * Example: "NHTSA"
-   */
-  dataSource?: string;
-
-  /**
-   * SORT COLUMN
-   * Which column to sort by
-   * Examples: "year", "manufacturer", "model", "body_class"
-   */
-  sortBy?: string;
-
-  /**
-   * SORT ORDER
-   * Ascending or descending sort
-   * Values: "asc" or "desc"
-   */
-  sortOrder?: 'asc' | 'desc';
-}
-
-/**
- * VEHICLE RESULT INTERFACE
- *
- * Represents a single vehicle record from search results.
- * This is what the backend returns for each matching vehicle.
- */
-export interface VehicleResult {
-  /**
-   * UNIQUE VEHICLE ID
-   * Hash-based identifier for this manufacturer-model-year combination
-   */
-  vehicle_id: string;
-
-  /**
-   * MANUFACTURER NAME
-   */
-  manufacturer: string;
-
-  /**
-   * MODEL NAME
-   */
-  model: string;
-
-  /**
-   * YEAR
-   */
-  year: number;
-
-  /**
-   * BODY CLASS
-   * Vehicle body style/type
-   */
-  body_class: string;
-
-  /**
-   * DATA SOURCE
-   * Original source of this data
-   */
-  data_source: string;
-
-  /**
-   * COMPOSITE KEY
-   * Pre-formatted string combining manufacturer|model|year
-   * Used for grouping and deduplication
-   */
-  make_model_year: string;
-
-  /**
-   * INSTANCE COUNT
-   * How many VIN instances exist for this combination
-   * Loaded on-demand from separate index
-   */
-  instance_count?: number;
-}
-
-/**
- * VEHICLE SEARCH RESPONSE INTERFACE
- *
- * The complete response from the vehicle search API endpoint.
- * Includes both the results and pagination metadata.
- */
-export interface VehicleSearchResponse {
-  /**
-   * SEARCH RESULTS
-   * Array of matching vehicle records
-   */
-  results: VehicleResult[];
-
-  /**
-   * TOTAL COUNT
-   * Total number of results (across all pages)
-   */
-  total: number;
-
-  /**
-   * CURRENT PAGE
-   * The page number returned (1-indexed)
-   */
-  page: number;
-
-  /**
-   * PAGE SIZE
-   * Number of results per page
-   */
-  size: number;
-
-  /**
-   * TOTAL PAGES
-   * Total number of pages available
-   * Calculated as: Math.ceil(total / size)
-   */
-  totalPages: number;
-}
-
-/**
- * VIN INSTANCE INTERFACE
- *
- * Represents a single generated VIN instance.
- * VINs are generated on-demand, not stored in the database.
- */
-export interface VinInstance {
-  /**
-   * VEHICLE IDENTIFICATION NUMBER
-   * 17-character unique identifier
-   */
-  vin: string;
-
-  /**
-   * MANUFACTURER
-   */
-  manufacturer: string;
-
-  /**
-   * MODEL
-   */
-  model: string;
-
-  /**
-   * YEAR
-   */
-  year: number;
-
-  /**
-   * STATE OF REGISTRATION
-   * US state code (2 letters)
-   * Example: "CA", "TX", "FL"
-   */
-  state: string;
-
-  /**
-   * VEHICLE COLOR
-   * Generated based on year (vintage vs modern palettes)
-   */
-  color: string;
-
-  /**
-   * ESTIMATED VALUE
-   * Calculated from condition, mileage, and options
-   * In USD
-   */
-  value: number;
-}
-
-/**
- * VIN INSTANCES RESPONSE INTERFACE
- *
- * Response from the VIN instances endpoint.
- */
-export interface VinInstancesResponse {
-  /**
-   * VEHICLE ID
-   * The ID this request was for
-   */
-  vehicle_id: string;
-
-  /**
-   * GENERATED INSTANCES
-   * Array of VIN instances
-   */
-  instances: VinInstance[];
-}
-
-/**
- * API SERVICE CLASS
- *
- * Injectable service that provides methods for all backend API calls.
- * Uses HttpClient for HTTP communication.
+ * Injectable service that provides configuration-driven HTTP communication.
+ * Uses TypeScript generics to maintain type safety without hardcoding types.
  *
  * DEPENDENCY INJECTION:
  * Angular automatically injects HttpClient when this service is created.
- * HttpClient must be imported in app.module.ts via HttpClientModule.
  */
 @Injectable({
   providedIn: 'root' // Singleton service available application-wide
@@ -318,152 +81,309 @@ export class ApiService {
   constructor(private http: HttpClient) {}
 
   /**
-   * GET MANUFACTURER-MODEL COUNTS
+   * GENERIC REQUEST METHOD
    *
-   * Fetches the complete list of manufacturers and their models with counts.
-   * This data populates the picker component.
+   * Makes an HTTP request based on the provided configuration.
+   * This is the primary method for making API calls.
    *
-   * ENDPOINT: GET /api/search/manufacturer-model-counts
+   * @param config - API configuration object
+   * @param endpointId - Which endpoint to call (from config.endpoints)
+   * @param requestData - Optional request data/filters
+   * @returns Observable<TResponse> - The response data
    *
-   * @returns Observable<Manufacturer[]> - Array of manufacturers with their models
-   *
-   * USAGE EXAMPLE:
-   * this.apiService.getManufacturerModelCounts()
-   *   .pipe(takeUntil(this.destroy$))
-   *   .subscribe(manufacturers => {
-   *     this.manufacturers = manufacturers;
-   *   });
-   *
-   * ERROR HANDLING:
-   * - Network errors are caught and logged
-   * - Empty array is returned on error (graceful degradation)
+   * @example
+   * ```typescript
+   * this.apiService.request<VehicleFilters, VehicleResponse>(
+   *   VEHICLE_API_CONFIG,
+   *   'search',
+   *   { page: 1, size: 20, manufacturer: 'Ford' }
+   * ).subscribe(response => {
+   *   console.log(response.results);
+   * });
+   * ```
    */
-  getManufacturerModelCounts(): Observable<Manufacturer[]> {
-    const url = `${this.apiUrl}/search/manufacturer-model-counts`;
+  request<TRequest = any, TResponse = any>(
+    config: ApiConfig,
+    endpointId: string,
+    requestData?: TRequest
+  ): Observable<TResponse> {
+    // Get the specific endpoint configuration
+    const endpoint = config.endpoints[endpointId];
 
-    return this.http.get<ManufacturerModelCountsResponse>(url).pipe(
-      // Extract manufacturers array from response
-      map(response => response.manufacturers),
+    if (!endpoint) {
+      const error = `Endpoint '${endpointId}' not found in API config '${config.id}'`;
+      console.error(error);
+      return throwError(() => new Error(error));
+    }
 
-      // Sort alphabetically by manufacturer name
-      map(manufacturers =>
-        manufacturers.sort((a, b) => a.manufacturer.localeCompare(b.manufacturer))
-      ),
+    // Build the full URL
+    const url = this.buildUrl(config, endpoint);
 
-      // Sort each manufacturer's models alphabetically
-      map(manufacturers =>
-        manufacturers.map(m => ({
-          ...m,
-          models: m.models.sort((a, b) => a.model.localeCompare(b.model))
-        }))
-      ),
+    // Determine HTTP method (default to GET)
+    const method = endpoint.method || 'GET';
+
+    // Build headers
+    const headers = this.buildHeaders(config, endpoint);
+
+    // Transform request data if transformer is provided
+    const transformedRequest = endpoint.transformRequest
+      ? endpoint.transformRequest(requestData!)
+      : requestData;
+
+    // Make the HTTP request based on method
+    let request$: Observable<any>;
+
+    switch (method) {
+      case 'GET':
+        const params = this.buildHttpParams(endpoint, transformedRequest);
+        request$ = this.http.get(url, { params, headers });
+        break;
+
+      case 'POST':
+        request$ = this.http.post(url, transformedRequest, { headers });
+        break;
+
+      case 'PUT':
+        request$ = this.http.put(url, transformedRequest, { headers });
+        break;
+
+      case 'PATCH':
+        request$ = this.http.patch(url, transformedRequest, { headers });
+        break;
+
+      case 'DELETE':
+        request$ = this.http.delete(url, { headers });
+        break;
+
+      default:
+        return throwError(() => new Error(`Unsupported HTTP method: ${method}`));
+    }
+
+    // Apply response transformation and error handling
+    return request$.pipe(
+      // Transform response if transformer is provided
+      map(response => {
+        if (endpoint.transformResponse) {
+          return endpoint.transformResponse(response);
+        }
+        return response as TResponse;
+      }),
 
       // Error handling
       catchError(error => {
-        console.error('Error fetching manufacturer-model counts:', error);
+        console.error(
+          `[ApiService] Request failed: ${config.id}.${endpointId}`,
+          error
+        );
         return throwError(() => error);
       })
     );
   }
 
   /**
-   * SEARCH VEHICLES
+   * GET REQUEST SHORTHAND
    *
-   * Searches for vehicles based on filters.
-   * Returns paginated results with metadata.
+   * Convenience method for GET requests.
    *
-   * ENDPOINT: GET /api/search/vehicle-details
-   *
-   * @param filters - Search filters and pagination parameters
-   * @returns Observable<VehicleSearchResponse> - Search results with pagination
-   *
-   * USAGE EXAMPLE:
-   * const filters: VehicleSearchFilters = {
-   *   models: 'Ford:F-150,Chevrolet:Corvette',
-   *   page: 1,
-   *   size: 20,
-   *   yearMin: 2015,
-   *   sortBy: 'year',
-   *   sortOrder: 'desc'
-   * };
-   *
-   * this.apiService.searchVehicles(filters)
-   *   .pipe(takeUntil(this.destroy$))
-   *   .subscribe(response => {
-   *     this.vehicles = response.results;
-   *     this.totalCount = response.total;
-   *   });
-   *
-   * ERROR HANDLING:
-   * - Network errors are caught and logged
-   * - Error is re-thrown for component to handle
+   * @param config - API configuration object
+   * @param endpointId - Which endpoint to call
+   * @param params - Optional query parameters
+   * @returns Observable<TResponse>
    */
-  searchVehicles(filters: VehicleSearchFilters): Observable<VehicleSearchResponse> {
-    const url = `${this.apiUrl}/search/vehicle-details`;
-
-    // Build HTTP query parameters from filters
-    let params = new HttpParams();
-
-    // Add each filter if it has a value
-    if (filters.models) params = params.set('models', filters.models);
-    if (filters.page) params = params.set('page', filters.page.toString());
-    if (filters.size) params = params.set('size', filters.size.toString());
-    if (filters.manufacturer) params = params.set('manufacturer', filters.manufacturer);
-    if (filters.model) params = params.set('model', filters.model);
-    if (filters.yearMin) params = params.set('yearMin', filters.yearMin.toString());
-    if (filters.yearMax) params = params.set('yearMax', filters.yearMax.toString());
-    if (filters.bodyClass) params = params.set('bodyClass', filters.bodyClass);
-    if (filters.dataSource) params = params.set('dataSource', filters.dataSource);
-    if (filters.sortBy) params = params.set('sortBy', filters.sortBy);
-    if (filters.sortOrder) params = params.set('sortOrder', filters.sortOrder);
-
-    return this.http.get<VehicleSearchResponse>(url, { params }).pipe(
-      // Error handling
-      catchError(error => {
-        console.error('Error searching vehicles:', error);
-        return throwError(() => error);
-      })
-    );
+  get<TRequest = any, TResponse = any>(
+    config: ApiConfig,
+    endpointId: string,
+    params?: TRequest
+  ): Observable<TResponse> {
+    return this.request<TRequest, TResponse>(config, endpointId, params);
   }
 
   /**
-   * GET VIN INSTANCES
+   * POST REQUEST SHORTHAND
    *
-   * Fetches generated VIN instances for a specific vehicle.
-   * VINs are generated on-demand, not stored in database.
+   * Convenience method for POST requests.
    *
-   * ENDPOINT: GET /api/search/vehicle-instances/:vehicleId
-   *
-   * @param vehicleId - The vehicle_id to get instances for
-   * @param count - How many instances to generate (default: 5, max: 100)
-   * @returns Observable<VinInstance[]> - Array of generated VIN instances
-   *
-   * USAGE EXAMPLE:
-   * this.apiService.getVinInstances('abc123', 10)
-   *   .pipe(takeUntil(this.destroy$))
-   *   .subscribe(instances => {
-   *     this.vinInstances = instances;
-   *   });
-   *
-   * ERROR HANDLING:
-   * - Network errors are caught and logged
-   * - Empty array is returned on error
+   * @param config - API configuration object
+   * @param endpointId - Which endpoint to call
+   * @param body - Request body data
+   * @returns Observable<TResponse>
    */
-  getVinInstances(vehicleId: string, count: number = 5): Observable<VinInstance[]> {
-    const url = `${this.apiUrl}/search/vehicle-instances/${vehicleId}`;
+  post<TRequest = any, TResponse = any>(
+    config: ApiConfig,
+    endpointId: string,
+    body: TRequest
+  ): Observable<TResponse> {
+    return this.request<TRequest, TResponse>(config, endpointId, body);
+  }
 
+  /**
+   * PUT REQUEST SHORTHAND
+   *
+   * Convenience method for PUT requests.
+   *
+   * @param config - API configuration object
+   * @param endpointId - Which endpoint to call
+   * @param body - Request body data
+   * @returns Observable<TResponse>
+   */
+  put<TRequest = any, TResponse = any>(
+    config: ApiConfig,
+    endpointId: string,
+    body: TRequest
+  ): Observable<TResponse> {
+    return this.request<TRequest, TResponse>(config, endpointId, body);
+  }
+
+  /**
+   * PATCH REQUEST SHORTHAND
+   *
+   * Convenience method for PATCH requests.
+   *
+   * @param config - API configuration object
+   * @param endpointId - Which endpoint to call
+   * @param body - Request body data
+   * @returns Observable<TResponse>
+   */
+  patch<TRequest = any, TResponse = any>(
+    config: ApiConfig,
+    endpointId: string,
+    body: TRequest
+  ): Observable<TResponse> {
+    return this.request<TRequest, TResponse>(config, endpointId, body);
+  }
+
+  /**
+   * DELETE REQUEST SHORTHAND
+   *
+   * Convenience method for DELETE requests.
+   *
+   * @param config - API configuration object
+   * @param endpointId - Which endpoint to call
+   * @returns Observable<void>
+   */
+  delete(
+    config: ApiConfig,
+    endpointId: string
+  ): Observable<void> {
+    return this.request<any, void>(config, endpointId);
+  }
+
+  // ============================================================================
+  // PRIVATE HELPER METHODS
+  // ============================================================================
+
+  /**
+   * BUILD FULL URL
+   *
+   * Constructs the complete URL for an endpoint.
+   * Combines: apiUrl + basePath + endpoint.url
+   *
+   * @param config - API configuration
+   * @param endpoint - Endpoint configuration
+   * @returns Complete URL string
+   */
+  private buildUrl(config: ApiConfig, endpoint: ApiEndpointConfig): string {
+    let url = this.apiUrl;
+
+    // Add base path if specified in config
+    if (config.basePath) {
+      url = `${url}${config.basePath}`;
+    }
+
+    // Add endpoint-specific path
+    url = `${url}${endpoint.url}`;
+
+    return url;
+  }
+
+  /**
+   * BUILD HTTP HEADERS
+   *
+   * Constructs HTTP headers from configuration.
+   *
+   * @param config - API configuration
+   * @param endpoint - Endpoint configuration (for future use)
+   * @returns HttpHeaders object
+   */
+  private buildHeaders(
+    config: ApiConfig,
+    endpoint: ApiEndpointConfig
+  ): HttpHeaders {
+    let headers = new HttpHeaders();
+
+    // Add default headers from config
+    if (config.defaultHeaders) {
+      Object.keys(config.defaultHeaders).forEach(key => {
+        headers = headers.set(key, config.defaultHeaders![key]);
+      });
+    }
+
+    // Future: Add endpoint-specific headers if needed
+
+    return headers;
+  }
+
+  /**
+   * BUILD HTTP PARAMS
+   *
+   * Converts request data to HttpParams for GET requests.
+   * Uses custom builder if provided, otherwise uses default conversion.
+   *
+   * @param endpoint - Endpoint configuration
+   * @param requestData - The request data to convert
+   * @returns HttpParams object
+   */
+  private buildHttpParams(
+    endpoint: ApiEndpointConfig,
+    requestData?: any
+  ): HttpParams {
+    // Use custom param builder if provided
+    if (endpoint.buildParams) {
+      return endpoint.buildParams(requestData);
+    }
+
+    // Default: convert object to HttpParams
+    return this.objectToHttpParams(requestData);
+  }
+
+  /**
+   * OBJECT TO HTTP PARAMS
+   *
+   * Converts a plain object to HttpParams.
+   * Handles nested objects, arrays, and primitive values.
+   *
+   * @param obj - Object to convert
+   * @returns HttpParams object
+   */
+  private objectToHttpParams(obj?: any): HttpParams {
     let params = new HttpParams();
-    if (count) params = params.set('count', count.toString());
 
-    return this.http.get<VinInstancesResponse>(url, { params }).pipe(
-      // Extract instances array from response
-      map(response => response.instances),
+    if (!obj) {
+      return params;
+    }
 
-      // Error handling
-      catchError(error => {
-        console.error(`Error fetching VIN instances for vehicle ${vehicleId}:`, error);
-        return throwError(() => error);
-      })
-    );
+    Object.keys(obj).forEach(key => {
+      const value = obj[key];
+
+      // Skip undefined and null values
+      if (value === undefined || value === null) {
+        return;
+      }
+
+      // Handle arrays (convert to comma-separated string)
+      if (Array.isArray(value)) {
+        params = params.set(key, value.join(','));
+      }
+      // Handle objects (convert to JSON string)
+      else if (typeof value === 'object') {
+        params = params.set(key, JSON.stringify(value));
+      }
+      // Handle primitives
+      else {
+        params = params.set(key, String(value));
+      }
+    });
+
+    return params;
   }
 }

@@ -137,10 +137,12 @@ export interface PaginationConfig {
 }
 
 /**
- * API CONFIGURATION
- * How to fetch data from backend
+ * TABLE API CONFIGURATION (Legacy)
+ * How to fetch data from backend - table-specific configuration
+ *
+ * DEPRECATED: Prefer using apiConfigRef for new implementations
  */
-export interface ApiConfig {
+export interface TableApiConfig {
   // Option 1: Direct HTTP (for flexibility)
   http?: {
     method: 'GET' | 'POST';
@@ -160,6 +162,33 @@ export interface ApiConfig {
 }
 
 /**
+ * API CONFIGURATION REFERENCE
+ * References a configuration from src/app/config/api/
+ * This is the RECOMMENDED approach for new tables.
+ */
+export interface ApiConfigRef {
+  /**
+   * Configuration ID
+   * References a configuration from src/app/config/api/
+   * Example: 'vehicles', 'products', 'suppliers'
+   */
+  configId: string;
+
+  /**
+   * Endpoint ID
+   * Which endpoint from the configuration to use
+   * Example: 'search', 'list', 'manufacturerModelCounts'
+   */
+  endpointId: string;
+
+  /**
+   * Optional parameter mapper
+   * Transform table state to API request parameters
+   */
+  paramMapper?: (tableState: any) => any;
+}
+
+/**
  * MAIN TABLE CONFIGURATION
  * Complete configuration for BaseTableComponent
  */
@@ -172,8 +201,9 @@ export interface TableConfig<T = any> {
   expandable?: ExpandableConfig;              // Row expansion
   pagination?: PaginationConfig;              // Pagination
 
-  // Data source
-  api?: ApiConfig;                            // API configuration
+  // Data source (choose ONE)
+  api?: TableApiConfig;                       // Legacy API configuration
+  apiConfigRef?: ApiConfigRef;                // NEW: Reference to configuration-driven API
   data?: T[];                                 // Static data (for testing)
 
   // Styling

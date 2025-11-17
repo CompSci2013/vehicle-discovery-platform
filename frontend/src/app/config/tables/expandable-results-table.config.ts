@@ -10,16 +10,28 @@
   - Sub-table shows detailed VIN information
   - Sortable columns in both parent and sub-table
   - Pagination for parent table
+  - Configuration-driven API (references vehicle API config)
 
   USAGE:
   import { EXPANDABLE_RESULTS_TABLE_CONFIG } from './config/tables/expandable-results-table.config';
   <app-base-table [config]="EXPANDABLE_RESULTS_TABLE_CONFIG"></app-base-table>
+
+  NOTE:
+  This configuration uses apiConfigRef to reference the vehicle API configuration.
+  The actual API endpoints are defined in src/app/config/api/vehicle-api.config.ts
 */
 
 import { TableConfig } from '../../shared/models/table-config.model';
 
 export const EXPANDABLE_RESULTS_TABLE_CONFIG: TableConfig = {
   id: 'vehicle-results-expandable-table',
+
+  // API CONFIGURATION REFERENCE
+  // Main table uses search endpoint, expansion uses vinInstances endpoint
+  apiConfigRef: {
+    configId: 'vehicles',
+    endpointId: 'search'
+  },
 
   // PARENT TABLE COLUMNS
   columns: [

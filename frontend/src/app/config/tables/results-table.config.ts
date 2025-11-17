@@ -9,16 +9,28 @@
   - Sortable columns
   - Pagination
   - No selection checkboxes (display only)
+  - Configuration-driven API (references vehicle API config)
 
   USAGE:
   import { RESULTS_TABLE_CONFIG } from './config/tables/results-table.config';
   <app-base-table [config]="RESULTS_TABLE_CONFIG"></app-base-table>
+
+  NOTE:
+  This configuration uses apiConfigRef to reference the vehicle API configuration.
+  The actual API endpoints are defined in src/app/config/api/vehicle-api.config.ts
 */
 
 import { TableConfig } from '../../shared/models/table-config.model';
 
 export const RESULTS_TABLE_CONFIG: TableConfig = {
   id: 'vehicle-results-table',
+
+  // API CONFIGURATION REFERENCE
+  // This table fetches data from the vehicle API's search endpoint
+  apiConfigRef: {
+    configId: 'vehicles',
+    endpointId: 'search'
+  },
 
   // COLUMNS
   columns: [
