@@ -52,35 +52,78 @@ podman exec -it vehicle-discovery-platform-dev ng generate component foo
 ## Current Status
 
 ```
-Phase 2: BaseTableComponent Implementation (IN PROGRESS)
+Phase 5: Integration & Polish (IN PROGRESS - Component Migration Needed)
 ├── ✅ Phase 1: Foundation Complete
-│   ├── ✅ Angular 14 project bootstrapped
-│   ├── ✅ PrimeNG installed
-│   ├── ✅ UrlStateService implemented
-│   ├── ✅ BroadcastChannelService implemented
+│   ├── ✅ Angular 14 project bootstrapped with PrimeNG
+│   ├── ✅ UrlStateService implemented (URL-first architecture)
+│   ├── ✅ BroadcastChannelService implemented (configurable)
+│   ├── ✅ RequestCoordinatorService (deduplication)
 │   ├── ✅ Routing infrastructure complete
-│   ├── ✅ Demo data infrastructure (validated against Elasticsearch)
-│   └── ✅ DemoApiService with filtering/sorting/pagination
+│   └── ✅ Demo data infrastructure
 │
-└── ⏳ Phase 2: BaseTableComponent (CURRENT)
-    ├── ✅ Item 1: Demo data created (frontend/src/app/demo/)
-    ├── ⏳ Item 2: Create BaseTableComponent (IN PROGRESS)
-    ├── ⏳ Item 3: Create sample picker configuration
-    ├── ⏳ Item 4: Create sample results table configuration
-    ├── ⏳ Item 5: Create sample expandable table configuration
-    └── ⏳ Item 6: Create test page demonstrating all variants
+├── ✅ Phase 2: BaseTableComponent Complete
+│   ├── ✅ Configuration-driven BaseTableComponent
+│   ├── ✅ Sort, filter, pagination support
+│   ├── ✅ URL state integration
+│   └── ✅ Demo configurations created
+│
+├── ✅ Phase 3: Column Management Complete
+│   ├── ✅ Column reordering (drag-and-drop)
+│   ├── ✅ Column visibility toggles
+│   ├── ✅ Column manager component
+│   └── ✅ URL state persistence for column config
+│
+├── ✅ Phase 4: Hierarchical Selection Complete
+│   ├── ✅ Parent-child selection patterns
+│   ├── ✅ Single-column picker mode
+│   ├── ✅ Dual-column picker mode
+│   ├── ✅ Binary checkbox states (no indeterminate)
+│   └── ✅ URL state persistence for selections
+│
+├── ✅ Phase 5: Generic Services Architecture (JUST COMPLETED)
+│   ├── ✅ ApiService refactored to be 100% generic
+│   ├── ✅ BroadcastChannelService made configurable
+│   ├── ✅ API configuration interfaces created
+│   ├── ✅ Vehicle API configuration implemented
+│   ├── ✅ All table configs updated with apiConfigRef
+│   └── ✅ Documentation: GENERIC_SERVICES_REFACTORING.md
+│
+└── ⏳ Phase 5: Integration Testing (CURRENT - NEXT TASK)
+    ├── ⚠️ BLOCKED: Components need migration to new API first
+    ├── ⏳ Step 5.1: Test Sort + Hierarchical Selection
+    ├── ⏳ Step 5.2: Test Filter + Hierarchical Selection
+    ├── ⏳ Step 5.3: Test Column Reordering
+    ├── ⏳ Step 5.4: Test Pagination + Selection
+    └── ⏳ Step 5.5: Test URL State Consistency
 ```
+
+**IMMEDIATE NEXT STEP:**
+Update components to use new generic API service before proceeding with integration tests.
+Components using old methods (getManufacturerModelCounts, searchVehicles, getVinInstances)
+must be migrated to use new configuration-driven API.
 
 ---
 
 ## Key Documents
 
+**Essential Reading:**
 1. **[GOALS.md](GOALS.md)** - Project goals and requirements (READ THIS FIRST)
 2. **[ANALYSIS.md](ANALYSIS.md)** - Comprehensive codebase analysis (READ THIS SECOND)
-3. **[PICKER-CHECKBOX-BEHAVIOR.md](PICKER-CHECKBOX-BEHAVIOR.md)** - Tri-state checkbox specification
-4. **[PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)** - API, tech stack, workflow
+3. **[SESSION-START.md](SESSION-START.md)** - This document (always start here)
+
+**Architecture & Design:**
+4. **[GENERIC_SERVICES_REFACTORING.md](GENERIC_SERVICES_REFACTORING.md)** - Generic API architecture (NEW!)
 5. **[URL-STATE-ARCHITECTURE-ANALYSIS.md](URL-STATE-ARCHITECTURE-ANALYSIS.md)** - What NOT to copy from apn
 6. **[STATE-MANAGEMENT-DRAFT.md](STATE-MANAGEMENT-DRAFT.md)** - URL-first patterns
+7. **[PICKER-CHECKBOX-BEHAVIOR.md](PICKER-CHECKBOX-BEHAVIOR.md)** - Checkbox specification
+
+**Phase Documentation:**
+8. **[PHASE-5-PROGRESS.md](PHASE-5-PROGRESS.md)** - Current phase progress tracking
+9. **[PHASE-5-INTEGRATION-ISSUES.md](PHASE-5-INTEGRATION-ISSUES.md)** - Known issues and fixes
+10. **[PHASE-5-PLAN.md](PHASE-5-PLAN.md)** - Integration testing plan
+
+**Reference:**
+11. **[PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)** - API, tech stack, workflow
 
 ---
 
@@ -176,8 +219,27 @@ podman rm vehicle-discovery-platform-dev
 ✅ **Picker = Table Configuration** (selection column + apply button)
 ✅ **Expandable rows = Configuration** (not separate component)
 ✅ **Plugin-based pickers** (add via config file, no code changes)
+✅ **Generic Services Architecture** (NEW - Nov 2025)
+   - ApiService: 100% generic, configuration-driven
+   - BroadcastChannelService: Configurable channel name
+   - All domain logic in config files (config/api/)
+   - Type-safe via TypeScript generics
+   - Zero hardcoded endpoints or domain types
 
 ---
 
-**Last Updated:** 2025-11-11 (Phase 2 in progress)
-**Quick Access:** Start with GOALS.md, then ANALYSIS.md, then PICKER-CHECKBOX-BEHAVIOR.md
+## Recent Major Changes
+
+**Nov 17, 2025 - Generic Services Refactoring (Commit d669658)**
+- All services refactored to be domain-agnostic
+- Created API configuration architecture (ApiConfig, ApiEndpointConfig)
+- Moved all vehicle types to config/api/vehicle-api.types.ts
+- Moved all API endpoints to config/api/vehicle-api.config.ts
+- Updated all table configs with apiConfigRef
+- **BREAKING CHANGE:** Components must migrate to new API
+- See GENERIC_SERVICES_REFACTORING.md for migration guide
+
+---
+
+**Last Updated:** 2025-11-17 (Phase 5 - Generic Services complete, Component migration needed)
+**Quick Access:** SESSION-START.md → GENERIC_SERVICES_REFACTORING.md → PHASE-5-PROGRESS.md
