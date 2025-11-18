@@ -69,6 +69,7 @@
       <!-- HEADER -->
       <thead>
         <tr>
+          <th *ngIf="config.expandable?.enabled" style="width: 50px"></th>
           <th style="width: 50px"></th>
           <th *ngFor="let col of getVisibleColumns()"
               [class.sortable]="col.sortable"
@@ -87,6 +88,7 @@
         <ng-container *ngFor="let parentValue of getHierarchicalParents()">
           <!-- Parent row -->
           <tr class="parent-row">
+            <td *ngIf="config.expandable?.enabled"></td>
             <td class="checkbox-cell">
               <p-checkbox
                 [ngModel]="getParentCheckboxValue(parentValue)"
@@ -101,21 +103,47 @@
           </tr>
 
           <!-- Child rows for this parent (indented) -->
-          <tr *ngFor="let child of getChildrenForParent(parentValue)"
-              class="child-row"
-              [class.selected]="isRowSelected(child)">
-            <td class="checkbox-cell">
-              <p-checkbox
-                [ngModel]="isRowSelected(child)"
-                [binary]="true"
-                (onChange)="onChildCheckboxChange(child, $event)">
-              </p-checkbox>
-            </td>
-            <!-- Data columns for child -->
-            <td *ngFor="let col of getVisibleColumns()" class="child-data-cell">
-              <span class="child-indent">{{ child[col.key] }}</span>
-            </td>
-          </tr>
+          <ng-container *ngFor="let child of getChildrenForParent(parentValue)">
+            <tr class="child-row" [class.selected]="isRowSelected(child)">
+              <td *ngIf="config.expandable?.enabled" class="checkbox-cell">
+                <button
+                  pButton
+                  [icon]="isRowExpanded(child) ? (config.expandable?.collapseIcon || 'pi pi-chevron-down') : (config.expandable?.expandIcon || 'pi pi-chevron-right')"
+                  class="p-button-text p-button-sm"
+                  (click)="toggleRowExpansion(child)">
+                </button>
+              </td>
+              <td class="checkbox-cell">
+                <p-checkbox
+                  [ngModel]="isRowSelected(child)"
+                  [binary]="true"
+                  (onChange)="onChildCheckboxChange(child, $event)">
+                </p-checkbox>
+              </td>
+              <!-- Data columns for child -->
+              <td *ngFor="let col of getVisibleColumns()" class="child-data-cell">
+                <span class="child-indent">{{ child[col.key] }}</span>
+              </td>
+            </tr>
+
+            <!-- Expanded sub-table row -->
+            <tr *ngIf="isRowExpanded(child) && config.expandable?.enabled" class="expanded-row">
+              <td [attr.colspan]="getVisibleColumns().length + (config.expandable?.enabled ? 1 : 0) + 1">
+                <div class="sub-table-container">
+                  <app-base-table
+                    *ngIf="config.expandable?.subTable"
+                    [config]="{
+                      id: config.id + '-sub',
+                      columns: config.expandable?.subTable?.columns || [],
+                      data: getSubTableData(child),
+                      striped: true,
+                      size: 'small'
+                    }">
+                  </app-base-table>
+                </div>
+              </td>
+            </tr>
+          </ng-container>
         </ng-container>
       </tbody>
     </table>
@@ -143,6 +171,7 @@
       <!-- HEADER -->
       <thead>
         <tr>
+          <th *ngIf="config.expandable?.enabled" style="width: 50px"></th>
           <th *ngFor="let col of getVisibleColumns(); let i = index"
               [class.sortable]="col.sortable"
               (click)="onSortColumn(col)">
@@ -156,7 +185,16 @@
 
       <!-- BODY: Each row shows all data columns with embedded checkboxes -->
       <tbody>
-        <tr *ngFor="let row of data" class="data-row">
+        <ng-container *ngFor="let row of data">
+        <tr class="data-row">
+          <td *ngIf="config.expandable?.enabled" class="checkbox-cell">
+            <button
+              pButton
+              [icon]="isRowExpanded(row) ? (config.expandable?.collapseIcon || 'pi pi-chevron-down') : (config.expandable?.expandIcon || 'pi pi-chevron-right')"
+              class="p-button-text p-button-sm"
+              (click)="toggleRowExpansion(row)">
+            </button>
+          </td>
           <td *ngFor="let col of getVisibleColumns(); let colIndex = index">
             <!-- Parent checkbox embedded in parent column (if dual-selector mode) -->
             <!-- PHASE 4 FIX: In dual mode, shows THIS ROW's selection state, but clicking affects ALL rows with that parent -->
@@ -196,6 +234,25 @@
             </span>
           </td>
         </tr>
+
+        <!-- Expanded sub-table row -->
+        <tr *ngIf="isRowExpanded(row) && config.expandable?.enabled" class="expanded-row">
+          <td [attr.colspan]="getVisibleColumns().length + (config.expandable?.enabled ? 1 : 0)">
+            <div class="sub-table-container">
+              <app-base-table
+                *ngIf="config.expandable?.subTable"
+                [config]="{
+                  id: config.id + '-sub',
+                  columns: config.expandable?.subTable?.columns || [],
+                  data: getSubTableData(row),
+                  striped: true,
+                  size: 'small'
+                }">
+              </app-base-table>
+            </div>
+          </td>
+        </tr>
+        </ng-container>
       </tbody>
     </table>
   </div>
@@ -215,14 +272,67 @@
       <!-- HEADER -->
       <ng-template pTemplate="header">
         <tr>
+          <!-- Expand column (if expandable) -->
+          <th *ngIf="config.expandable?.enabled" style="width: 50px"></th>
+
+          <!-- Selection column (if selection enabled) -->
+          <th *ngIf="config.selection?.enabled" style="width: 50px">
+            <p-checkbox
+              *ngIf="config.selection?.mode === 'multi'"
+              [binary]="true"
+              [disabled]="true">
+            </p-checkbox>
+          </th>
+
+          <!-- Data columns -->
           <th *ngFor="let col of getVisibleColumns()">{{ col.label }}</th>
         </tr>
       </ng-template>
 
       <!-- BODY -->
       <ng-template pTemplate="body" let-row>
+        <!-- Main data row -->
         <tr>
+          <!-- Expand button -->
+          <td *ngIf="config.expandable?.enabled">
+            <button
+              pButton
+              [icon]="isRowExpanded(row) ? (config.expandable?.collapseIcon || 'pi pi-chevron-down') : (config.expandable?.expandIcon || 'pi pi-chevron-right')"
+              class="p-button-text p-button-sm"
+              (click)="toggleRowExpansion(row)">
+            </button>
+          </td>
+
+          <!-- Selection checkbox -->
+          <td *ngIf="config.selection?.enabled">
+            <p-checkbox
+              [ngModel]="isRowSelected(row)"
+              [binary]="true"
+              (onChange)="onChildCheckboxChange(row, $event)">
+            </p-checkbox>
+          </td>
+
+          <!-- Data columns -->
           <td *ngFor="let col of getVisibleColumns()">{{ row[col.key] }}</td>
+        </tr>
+
+        <!-- Expanded sub-table row -->
+        <tr *ngIf="isRowExpanded(row) && config.expandable?.enabled" class="expanded-row">
+          <td [attr.colspan]="getVisibleColumns().length + (config.selection?.enabled ? 1 : 0) + (config.expandable?.enabled ? 1 : 0)">
+            <div class="sub-table-container">
+              <!-- Sub-table (recursive BaseTable) -->
+              <app-base-table
+                *ngIf="config.expandable?.subTable"
+                [config]="{
+                  id: config.id + '-sub',
+                  columns: config.expandable?.subTable?.columns || [],
+                  data: getSubTableData(row),
+                  striped: true,
+                  size: 'small'
+                }">
+              </app-base-table>
+            </div>
+          </td>
         </tr>
       </ng-template>
     </p-table>
