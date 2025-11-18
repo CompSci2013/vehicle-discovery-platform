@@ -91,6 +91,31 @@
     </div>
   </p-card>
 
+  <!-- EXPANDABLE ROWS DEMO (PHASE 6) -->
+  <p-card header="Expandable Rows Demo" [subheader]="'Vehicle search results with VIN instance sub-tables'" styleClass="picker-card">
+    <p-panel header="Instructions" [collapsed]="true" [toggleable]="true">
+      <ol>
+        <li>Click the <strong>chevron icon</strong> (▶) to expand a vehicle row</li>
+        <li>The row expands to show a <strong>sub-table with VIN instances</strong> for that vehicle</li>
+        <li>Sub-table displays detailed information (VIN, State, Color, Value, Mileage, etc.)</li>
+        <li>Click the <strong>chevron icon again</strong> (▼) to collapse the row</li>
+        <li>Multiple rows can be expanded simultaneously</li>
+        <li>Sub-table uses recursive BaseTableComponent (compact styling)</li>
+      </ol>
+      <p><strong>Data Source:</strong> Static VIN instances embedded in vehicle results (from DemoApiService)</p>
+    </p-panel>
+
+    <app-base-table
+      *ngIf="expandableData.length > 0"
+      [config]="expandableConfigWithData">
+    </app-base-table>
+
+    <div *ngIf="expandableData.length === 0" class="loading-placeholder">
+      <p-progressSpinner></p-progressSpinner>
+      <p>Loading expandable demo data...</p>
+    </div>
+  </p-card>
+
   <!-- Debug Info (Collapsible) -->
   <p-panel header="Debug Information" [collapsed]="true" [toggleable]="true" styleClass="debug-panel">
     <h4>Single Mode Selection State</h4>

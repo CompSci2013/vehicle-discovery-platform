@@ -6,6 +6,7 @@ import { DemoApiService, Manufacturer } from '../../demo';
 import { UrlStateService } from '../../core/services/url-state.service';
 import { PICKER_TABLE_DEMO_SINGLE_CONFIG } from '../../config/tables/picker-table-demo-single.config';
 import { PICKER_TABLE_DEMO_DUAL_CONFIG } from '../../config/tables/picker-table-demo-dual.config';
+import { EXPANDABLE_DEMO_CONFIG } from '../../config/tables/expandable-demo.config';
 
 /**
  * DEMO PAGE COMPONENT
@@ -39,6 +40,27 @@ export class DemoComponent implements OnInit, OnDestroy {
    * Demonstrates hierarchical selection with two embedded checkboxes
    */
   pickerConfigDual!: TableConfig;
+
+  /**
+   * Expandable table configuration
+   * Demonstrates expandable rows with sub-table VIN details
+   */
+  expandableConfig: TableConfig = EXPANDABLE_DEMO_CONFIG;
+
+  /**
+   * Vehicle data with VIN instances for expandable demo
+   */
+  expandableData: any[] = [];
+
+  /**
+   * Expandable config merged with data (for template binding)
+   */
+  get expandableConfigWithData(): TableConfig {
+    return {
+      ...this.expandableConfig,
+      data: this.expandableData
+    };
+  }
 
   /**
    * Current selection state - Single Mode
@@ -110,6 +132,9 @@ export class DemoComponent implements OnInit, OnDestroy {
 
     // Load manufacturer-model data
     this.loadManufacturerModelData();
+
+    // Load expandable demo data
+    this.loadExpandableData();
   }
 
   ngOnDestroy(): void {
@@ -387,5 +412,29 @@ export class DemoComponent implements OnInit, OnDestroy {
     }
 
     alert(`DUAL MODE: Applied ${this.selectionCountDual} selections!\n\nCheck console and URL for details.`);
+  }
+
+  /**
+   * Load expandable demo data (vehicle results with VIN instances)
+   * Demonstrates Phase 6: Expandable rows functionality
+   */
+  private loadExpandableData(): void {
+    console.log('[DemoComponent] Loading expandable demo data...');
+
+    // Get vehicle details for a few manufacturers/models for demo
+    this.demoApiService.getVehicleDetails({
+      models: 'Ford:F-150,Chevrolet:Corvette,Toyota:Camry,Tesla:Model 3',
+      page: 1,
+      size: 10
+    }).subscribe({
+      next: (response) => {
+        // Response includes VIN instances embedded in each vehicle (from DemoApiService enhancement)
+        this.expandableData = response.results;
+        console.log('[DemoComponent] Expandable data loaded:', this.expandableData.length, 'vehicles');
+      },
+      error: (error) => {
+        console.error('[DemoComponent] Error loading expandable data:', error);
+      }
+    });
   }
 }

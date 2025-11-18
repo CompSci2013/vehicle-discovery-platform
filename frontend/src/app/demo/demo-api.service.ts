@@ -216,11 +216,21 @@ export class DemoApiService {
     // Get page of results
     const pageResults = results.slice(startIndex, endIndex);
 
-    console.log(`[DemoApiService] Returning ${pageResults.length} of ${total} results (page ${page}/${totalPages})`);
+    // PHASE 6: Add VIN instances to each vehicle for expandable row demo
+    // This enriches the data so expandable sub-tables can display VIN details
+    const enrichedResults = pageResults.map(vehicle => {
+      const vinInstances = DEMO_VIN_INSTANCES[vehicle.vehicle_id] || [];
+      return {
+        ...vehicle,
+        vin_instances: vinInstances.slice(0, 5) // Limit to 5 VINs for demo
+      };
+    });
+
+    console.log(`[DemoApiService] Returning ${enrichedResults.length} of ${total} results (page ${page}/${totalPages})`);
 
     // Build response
     const response: VehicleDetailsResponse = {
-      results: pageResults,
+      results: enrichedResults as any, // Cast needed since we added vin_instances property dynamically
       total: total,
       page: page,
       size: size,
