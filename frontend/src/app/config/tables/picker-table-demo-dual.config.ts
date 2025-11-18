@@ -94,6 +94,15 @@ export const PICKER_TABLE_DEMO_DUAL_CONFIG: TableConfig = {
     urlParam: 'models-dual'
   },
 
+  // PAGINATION
+  pagination: {
+    enabled: true,
+    pageSize: 20,
+    pageSizeOptions: [10, 20, 50, 100],
+    showCurrentPageReport: true,
+    currentPageReportTemplate: 'Showing {first} to {last} of {totalRecords} models'
+  },
+
   // STYLING
   striped: true,
   bordered: false,

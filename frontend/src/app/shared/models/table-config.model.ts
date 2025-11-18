@@ -132,8 +132,10 @@ export interface ExpandableConfig {
 export interface PaginationConfig {
   enabled: boolean;                           // Enable pagination
   pageSize?: number;                          // Items per page (default: 20)
-  pageSizeOptions?: number[];                 // Page size dropdown options
-  position?: 'top' | 'bottom' | 'both';      // Where to show pagination controls
+  pageSizeOptions?: number[];                 // Page size dropdown options (default: [10, 20, 50, 100])
+  position?: 'top' | 'bottom' | 'both';      // Where to show pagination controls (default: 'bottom')
+  showCurrentPageReport?: boolean;            // Show "Showing X to Y of Z entries" (default: true)
+  currentPageReportTemplate?: string;         // Template for page report (default: 'Showing {first} to {last} of {totalRecords} entries')
 }
 
 /**

@@ -147,6 +147,18 @@
         </ng-container>
       </tbody>
     </table>
+
+    <!-- PAGINATION: For hierarchical single-selector table -->
+    <p-paginator
+      *ngIf="shouldShowPagination()"
+      [rows]="rows"
+      [totalRecords]="totalRecords"
+      [first]="first"
+      [rowsPerPageOptions]="config.pagination?.pageSizeOptions || [10, 20, 50, 100]"
+      [showCurrentPageReport]="shouldShowCurrentPageReport()"
+      [currentPageReportTemplate]="getPageReportTemplate()"
+      (onPageChange)="onPageChange($event)">
+    </p-paginator>
   </div>
 
   <!-- TABLE: DUAL-SELECTOR PICKER PATTERN -->
@@ -255,6 +267,18 @@
         </ng-container>
       </tbody>
     </table>
+
+    <!-- PAGINATION: For hierarchical dual-selector table -->
+    <p-paginator
+      *ngIf="shouldShowPagination()"
+      [rows]="rows"
+      [totalRecords]="totalRecords"
+      [first]="first"
+      [rowsPerPageOptions]="config.pagination?.pageSizeOptions || [10, 20, 50, 100]"
+      [showCurrentPageReport]="shouldShowCurrentPageReport()"
+      [currentPageReportTemplate]="getPageReportTemplate()"
+      (onPageChange)="onPageChange($event)">
+    </p-paginator>
   </div>
 
   <!-- TABLE: SIMPLE MODE -->
@@ -266,6 +290,8 @@
       [totalRecords]="totalRecords"
       [first]="first"
       [rowsPerPageOptions]="config.pagination?.pageSizeOptions || [10, 20, 50, 100]"
+      [showCurrentPageReport]="shouldShowCurrentPageReport()"
+      [currentPageReportTemplate]="getPageReportTemplate()"
       styleClass="p-datatable-sm"
       (onPage)="onPageChange($event)">
 

@@ -1278,4 +1278,45 @@ export class BaseTableComponent implements OnInit, OnChanges, OnDestroy {
     // A child row has a child value defined
     return row[childKey] !== undefined && row[childKey] !== null && row[childKey] !== '';
   }
+
+  /**
+   * PAGINATION: Get displayed data based on current page (client-side pagination)
+   * For hierarchical tables that don't use p-table's built-in pagination
+   * Returns a slice of this.data based on first and rows
+   */
+  getDisplayedData(): any[] {
+    if (!this.config.pagination?.enabled) {
+      return this.data;
+    }
+
+    // Calculate slice range
+    const startIndex = this.first;
+    const endIndex = this.first + this.rows;
+
+    return this.data.slice(startIndex, endIndex);
+  }
+
+  /**
+   * PAGINATION: Check if pagination should be shown
+   */
+  shouldShowPagination(): boolean {
+    return this.config.pagination?.enabled === true && this.totalRecords > 0;
+  }
+
+  /**
+   * PAGINATION: Get page report template
+   */
+  getPageReportTemplate(): string {
+    if (this.config.pagination?.currentPageReportTemplate) {
+      return this.config.pagination.currentPageReportTemplate;
+    }
+    return 'Showing {first} to {last} of {totalRecords} entries';
+  }
+
+  /**
+   * PAGINATION: Check if current page report should be shown
+   */
+  shouldShowCurrentPageReport(): boolean {
+    return this.config.pagination?.showCurrentPageReport !== false; // Default to true
+  }
 }

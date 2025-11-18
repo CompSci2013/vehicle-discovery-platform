@@ -157,6 +157,15 @@ export const EXPANDABLE_DEMO_CONFIG: TableConfig = {
     }
   },
 
+  // PAGINATION
+  pagination: {
+    enabled: true,
+    pageSize: 10,
+    pageSizeOptions: [5, 10, 20, 50],
+    showCurrentPageReport: true,
+    currentPageReportTemplate: 'Showing {first} to {last} of {totalRecords} vehicles'
+  },
+
   // STYLING
   striped: true,
   bordered: false,
