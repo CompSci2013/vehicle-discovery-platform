@@ -52,7 +52,7 @@ podman exec -it vehicle-discovery-platform-dev ng generate component foo
 ## Current Status
 
 ```
-Phase 5: Integration & Polish (95% COMPLETE - Testing Successful!)
+Phase 6: Sub-Table Expansion (COMPLETE ✅)
 ├── ✅ Phase 1: Foundation Complete & Verified
 │   ├── ✅ Angular 14 project bootstrapped with PrimeNG
 │   ├── ✅ UrlStateService implemented (URL-first architecture)
@@ -87,21 +87,46 @@ Phase 5: Integration & Polish (95% COMPLETE - Testing Successful!)
 │   ├── ✅ Vehicle API configuration implemented
 │   ├── ✅ All table configs updated with apiConfigRef
 │   ├── ✅ Component migration verified (no migration needed!)
-│   └── ✅ Documentation: GENERIC_SERVICES_REFACTORING.md
+│   ├── ✅ Documentation: GENERIC_SERVICES_REFACTORING.md
+│   └── ✅ Phase 5: Integration Testing (SUBSTANTIALLY COMPLETE)
+│       ├── ✅ Step 5.1: Sort + Hierarchical Selection TESTED & PASSING
+│       ├── ✅ Step 5.2: Filter + Hierarchical Selection TESTED & PASSING
+│       │   └── ✅ Critical bug fix verified: Parent state reflects visible children
+│       ├── ⏳ Step 5.3: Column Reordering (not tested - non-critical)
+│       ├── ⏳ Step 5.4: Pagination + Selection (demo data has no pagination)
+│       └── ✅ Step 5.5: URL State Consistency TESTED & PASSING
+│           └── ✅ Full state restoration verified (sort + filter + selection)
 │
-└── ✅ Phase 5: Integration Testing (SUBSTANTIALLY COMPLETE)
-    ├── ✅ Step 5.1: Sort + Hierarchical Selection TESTED & PASSING
-    ├── ✅ Step 5.2: Filter + Hierarchical Selection TESTED & PASSING
-    │   └── ✅ Critical bug fix verified: Parent state reflects visible children
-    ├── ⏳ Step 5.3: Column Reordering (not tested - non-critical)
-    ├── ⏳ Step 5.4: Pagination + Selection (demo data has no pagination)
-    └── ✅ Step 5.5: URL State Consistency TESTED & PASSING
-        └── ✅ Full state restoration verified (sort + filter + selection)
+└── ✅ Phase 6: Sub-Table Expansion (Expandable Rows) COMPLETE
+    ├── ✅ Step 6.1: Expandable row template restored to BaseTableComponent
+    │   ├── ✅ Expand/collapse icons added to all 3 table modes
+    │   ├── ✅ Recursive BaseTable rendering for sub-tables
+    │   └── ✅ Compact sub-table styling
+    ├── ⏳ Step 6.2: API loading for sub-tables (DEFERRED - static data sufficient)
+    ├── ✅ Step 6.3: Expandable demo configuration created
+    │   ├── ✅ EXPANDABLE_DEMO_CONFIG with static VIN data
+    │   ├── ✅ DemoApiService enhanced with VIN instances
+    │   └── ✅ Demo page updated with expandable section
+    ├── ✅ Step 6.4: Integration testing (6 tests, 6 passed)
+    │   ├── ✅ Expandable demo section displays
+    │   ├── ✅ Vehicle data loads with expand icons
+    │   ├── ✅ Single row expansion works
+    │   ├── ✅ Row collapse works
+    │   ├── ✅ Multiple rows expand simultaneously
+    │   └── ✅ Sub-table data integrity verified
+    └── ✅ Step 6.5: Documentation updated
+        └── ✅ PHASE-6-PLAN.md, SESSION-START.md updated
 ```
 
-**STATUS: Ready for Production Feature Development!**
+**STATUS: Phase 6 Complete - All Core Table Features Implemented! ✅**
 
-All core functionality tested and working. URL-first architecture fully functional.
+All core BaseTableComponent functionality complete:
+- ✅ Configuration-driven architecture
+- ✅ URL-first state management
+- ✅ Hierarchical selection (picker modes)
+- ✅ Expandable rows (sub-tables)
+- ✅ Generic API integration
+
 Demo page accessible at http://192.168.0.244:4203/demo
 
 ---
@@ -130,6 +155,33 @@ Demo page accessible at http://192.168.0.244:4203/demo
 
 ---
 
+## Phase 6 Integration Test Results (Nov 17, 2025)
+
+**6 Tests Conducted - 6 Passed ✅**
+
+| Test | Feature Tested | Result |
+|------|----------------|--------|
+| 6.1 | Expandable demo section appears | ✅ PASS |
+| 6.2 | Vehicle data loads with expand icons | ✅ PASS |
+| 6.3 | Single row expansion (chevron icon) | ✅ PASS |
+| 6.4 | Row collapse functionality | ✅ PASS |
+| 6.5 | Multiple rows expand simultaneously | ✅ PASS |
+| 6.6 | Sub-table data integrity (VIN prefixes correct) | ✅ PASS |
+
+**Key Findings:**
+- ✅ Recursive BaseTable rendering works perfectly
+- ✅ Expand/collapse icons toggle correctly (▶ ↔ ▼)
+- ✅ Sub-tables display 7 columns (VIN, State, Color, Value, Mileage, Condition, Title)
+- ✅ Static data expansion working (dataKey: 'vin_instances')
+- ✅ Multiple expanded rows maintained independently
+- ✅ VIN data correct for each manufacturer (Ford: 1FT..., Chevrolet: 1G1..., Toyota: 4T1...)
+- ✅ Session-only expansion state (not URL-persisted, as intended)
+
+**Deferred:**
+- ⏳ API loading for sub-tables (DEFERRED - static data sufficient for current needs)
+
+---
+
 ## Key Documents
 
 **Essential Reading:**
@@ -144,9 +196,10 @@ Demo page accessible at http://192.168.0.244:4203/demo
 7. **[PICKER-CHECKBOX-BEHAVIOR.md](PICKER-CHECKBOX-BEHAVIOR.md)** - Checkbox specification
 
 **Phase Documentation:**
-8. **[PHASE-5-PROGRESS.md](PHASE-5-PROGRESS.md)** - Current phase progress tracking
-9. **[PHASE-5-INTEGRATION-ISSUES.md](PHASE-5-INTEGRATION-ISSUES.md)** - Known issues and fixes
-10. **[PHASE-5-PLAN.md](PHASE-5-PLAN.md)** - Integration testing plan
+8. **[PHASE-6-PLAN.md](PHASE-6-PLAN.md)** - Phase 6: Sub-Table Expansion (COMPLETE)
+9. **[PHASE-5-PROGRESS.md](PHASE-5-PROGRESS.md)** - Phase 5 progress tracking
+10. **[PHASE-5-INTEGRATION-ISSUES.md](PHASE-5-INTEGRATION-ISSUES.md)** - Known issues and fixes
+11. **[PHASE-5-PLAN.md](PHASE-5-PLAN.md)** - Phase 5 integration testing plan
 
 **Validation Reports:**
 11. **[PHASE-VALIDATION-REPORT.md](PHASE-VALIDATION-REPORT.md)** - Comprehensive phase verification
@@ -260,6 +313,18 @@ podman rm vehicle-discovery-platform-dev
 
 ## Recent Major Changes
 
+**Nov 17, 2025 - Phase 6: Sub-Table Expansion COMPLETE**
+- ✅ Restored expandable row template to BaseTableComponent (all 3 modes)
+- ✅ Implemented recursive BaseTable rendering for sub-tables
+- ✅ Created EXPANDABLE_DEMO_CONFIG with static VIN data
+- ✅ Enhanced DemoApiService with embedded VIN instances
+- ✅ Added expandable rows demo section to demo page
+- ✅ Conducted integration testing (6 tests, 6 passed)
+- ✅ Verified expand/collapse icons, multi-row expansion, data integrity
+- ✅ Session-only expansion state (not URL-persisted)
+- ⏳ API loading for sub-tables deferred (static data sufficient)
+- ✅ Documentation: PHASE-6-PLAN.md updated
+
 **Nov 17, 2025 - Phase 5 Integration Testing COMPLETE**
 - ✅ Conducted comprehensive integration testing (8 tests, 8 passed)
 - ✅ Verified Sort + Selection integration (Phase 5.1)
@@ -281,6 +346,6 @@ podman rm vehicle-discovery-platform-dev
 
 ---
 
-**Last Updated:** 2025-11-17 (Phase 5 Complete - Ready for Production!)
+**Last Updated:** 2025-11-17 (Phase 6 Complete - All Core Table Features Done!)
 **Quick Access:** Demo at http://192.168.0.244:4203/demo
-**Test Results:** All 8 integration tests passing ✅
+**Test Results:** Phase 5: 8/8 passing ✅ | Phase 6: 6/6 passing ✅

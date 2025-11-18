@@ -420,22 +420,31 @@ onChildCheckboxChange(row: any, event: any): void {
 
 ---
 
-### Phase 5: Sub-Table Expansion (P1)
+### Phase 5: Sub-Table Expansion (P1) ✅ COMPLETE
 **Goal:** Support expandable rows with sub-tables (not hierarchical parents)
 
-#### Step 5.1: Enhance Row Expansion ⏳
-- [ ] Support static sub-table data from `config.expandable.subTable.dataKey`
-- [ ] Support dynamic sub-table data via API
-- [ ] Track expanded rows in component state
-- [ ] Render sub-table with own BaseTable instance (recursive)
-- **URL-First Constraint:** Expansion state NOT persisted to URL (session-only)
+**Completed:** November 17, 2025
 
-#### Step 5.2: Sub-Table Configuration ⏳
-- [ ] Define `subTableConfig` in expansion config
-  - Columns for sub-table
-  - Selection rules (inherited or independent)
-  - API endpoint if dynamic
-- **URL-First Constraint:** Sub-table selection state separate from parent table
+#### Step 5.1: Enhance Row Expansion ✅
+- [x] Support static sub-table data from `config.expandable.subTable.dataKey`
+- [ ] Support dynamic sub-table data via API (DEFERRED - static data sufficient)
+- [x] Track expanded rows in component state (`expandedRows: Set<any>`)
+- [x] Render sub-table with own BaseTable instance (recursive)
+- **URL-First Constraint:** ✅ Expansion state NOT persisted to URL (session-only)
+
+#### Step 5.2: Sub-Table Configuration ✅
+- [x] Define `subTableConfig` in expansion config
+  - Columns for sub-table (EXPANDABLE_DEMO_CONFIG)
+  - Selection rules (independent - sub-tables have no selection)
+  - API endpoint if dynamic (deferred)
+- **URL-First Constraint:** ✅ Sub-table selection state separate from parent table
+
+**Testing Results:**
+- ✅ 6 integration tests passed
+- ✅ Recursive BaseTable rendering verified
+- ✅ Expand/collapse functionality working
+- ✅ Multiple row expansion working
+- ✅ Sub-table data integrity verified
 
 ---
 
