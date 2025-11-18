@@ -2,12 +2,14 @@
   DEMO MODULE
 
   PURPOSE:
-  Organizes demo/sandbox components and services for BaseTableComponent development.
+  Organizes demo/sandbox components for BaseTableComponent development.
 
   CONTENTS:
-  - DemoApiService: Mock API with demo data
-  - Demo page component (to be created)
-  - Demo configurations (to be created)
+  - Demo page component
+  - Demo configurations
+
+  NOTE:
+  Static demo data has been removed. Components now use real API calls.
 
   USAGE:
   Import this module in app.module.ts to enable demo functionality.
@@ -15,8 +17,6 @@
 
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
-
-import { DemoApiService } from './demo-api.service';
 
 @NgModule({
   declarations: [
@@ -26,7 +26,7 @@ import { DemoApiService } from './demo-api.service';
     CommonModule
   ],
   providers: [
-    DemoApiService
+    // No demo-specific providers - using shared ApiService
   ]
 })
 export class DemoModule { }

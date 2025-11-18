@@ -1,8 +1,10 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { Subject } from 'rxjs';
+import { Subject, forkJoin } from 'rxjs';
 import { takeUntil, take } from 'rxjs/operators';
 import { TableConfig, SelectionChangeEvent } from '../../shared/models';
-import { DemoApiService, Manufacturer } from '../../demo';
+import { Manufacturer } from '../../config/api/vehicle-api.types';
+import { ApiService } from '../../core/services/api.service';
+import { VEHICLE_API_CONFIG } from '../../config/api/vehicle-api.config';
 import { UrlStateService } from '../../core/services/url-state.service';
 import { PICKER_TABLE_DEMO_SINGLE_CONFIG } from '../../config/tables/picker-table-demo-single.config';
 import { PICKER_TABLE_DEMO_DUAL_CONFIG } from '../../config/tables/picker-table-demo-dual.config';
@@ -99,7 +101,7 @@ export class DemoComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   constructor(
-    private demoApiService: DemoApiService,
+    private apiService: ApiService,
     private urlState: UrlStateService
   ) {}
 
@@ -143,15 +145,18 @@ export class DemoComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Load manufacturer-model combinations from demo API
+   * Load manufacturer-model combinations from real API
    * Transforms hierarchical structure into flat table rows
    */
   private loadManufacturerModelData(): void {
-    console.log('[DemoComponent] Loading manufacturer-model data...');
+    console.log('[DemoComponent] Loading manufacturer-model data from real API...');
 
-    this.demoApiService.getManufacturerModelCounts().subscribe({
+    this.apiService.get<any, Manufacturer[]>(
+      VEHICLE_API_CONFIG,
+      'manufacturerModelCounts'
+    ).subscribe({
       next: (manufacturers) => {
-        console.log('[DemoComponent] Received data:', manufacturers);
+        console.log('[DemoComponent] Received data from real API:', manufacturers);
 
         // Transform hierarchical structure (Manufacturer -> Models[])
         // Into flat structure (one row per model with manufacturer reference)
@@ -184,7 +189,7 @@ export class DemoComponent implements OnInit, OnDestroy {
           });
       },
       error: (error) => {
-        console.error('[DemoComponent] Error loading data:', error);
+        console.error('[DemoComponent] Error loading data from real API:', error);
       }
     });
   }
@@ -417,24 +422,96 @@ export class DemoComponent implements OnInit, OnDestroy {
   /**
    * Load expandable demo data (vehicle results with VIN instances)
    * Demonstrates Phase 6: Expandable rows functionality
+   *
+   * NOTE: Fetches real VIN data from Elasticsearch and groups by vehicle
    */
   private loadExpandableData(): void {
-    console.log('[DemoComponent] Loading expandable demo data...');
+    console.log('[DemoComponent] Loading expandable demo data from real VIN data...');
 
-    // Get vehicle details for a few manufacturers/models for demo
-    this.demoApiService.getVehicleDetails({
-      models: 'Ford:F-150,Chevrolet:Corvette,Toyota:Camry,Tesla:Model 3',
-      page: 1,
-      size: 10
-    }).subscribe({
-      next: (response) => {
-        // Response includes VIN instances embedded in each vehicle (from DemoApiService enhancement)
-        this.expandableData = response.results;
-        console.log('[DemoComponent] Expandable data loaded:', this.expandableData.length, 'vehicles');
+    // Get real manufacturer-model data first
+    this.apiService.get<any, Manufacturer[]>(
+      VEHICLE_API_CONFIG,
+      'manufacturerModelCounts'
+    ).subscribe({
+      next: (manufacturers) => {
+        // Fetch VINs for first 3 manufacturers
+        const manufacturersToLoad = manufacturers.slice(0, 3);
+        const vinRequests = manufacturersToLoad.map(mfr =>
+          this.apiService.get<any, any[]>(
+            VEHICLE_API_CONFIG,
+            'vinInstances',
+            { manufacturer: mfr.manufacturer, limit: 50 }
+          )
+        );
+
+        // Wait for all VIN requests to complete using forkJoin
+        forkJoin(vinRequests).subscribe({
+          next: (vinArrays: any[][]) => {
+            // Flatten all VINs
+            const allVins = vinArrays.flat().filter(v => v); // Filter out any undefined
+
+            // Group VINs by vehicle (manufacturer + model + year)
+            this.expandableData = this.groupVinsByVehicle(allVins);
+            console.log('[DemoComponent] Loaded', this.expandableData.length, 'vehicles with', allVins.length, 'total VINs from Elasticsearch');
+          },
+          error: (error) => {
+            console.error('[DemoComponent] Error loading VIN data:', error);
+            this.expandableData = [];
+          }
+        });
       },
       error: (error) => {
-        console.error('[DemoComponent] Error loading expandable data:', error);
+        console.error('[DemoComponent] Error loading manufacturer data:', error);
+        this.expandableData = [];
       }
+    });
+  }
+
+  /**
+   * Group VIN instances by vehicle (manufacturer + model + year)
+   * Creates vehicle summary rows with embedded VIN instances
+   *
+   * @param vins - Array of VIN instances from Elasticsearch
+   * @returns Array of vehicle objects with vin_instances property
+   */
+  private groupVinsByVehicle(vins: any[]): any[] {
+    // Group VINs by vehicle_id (or manufacturer+model+year if no vehicle_id)
+    const vehicleMap = new Map<string, any>();
+
+    vins.forEach(vin => {
+      // Use vehicle_id if available, otherwise create key from manufacturer+model+year
+      const vehicleKey = vin.vehicle_id || `${vin.manufacturer}-${vin.model}-${vin.year}`;
+
+      if (!vehicleMap.has(vehicleKey)) {
+        // Create new vehicle entry
+        vehicleMap.set(vehicleKey, {
+          vehicle_id: vehicleKey,
+          manufacturer: vin.manufacturer,
+          model: vin.model,
+          year: vin.year,
+          body_class: vin.body_class || 'Unknown',
+          data_source: vin.data_source || 'Elasticsearch',
+          make_model_year: `${vin.manufacturer}|${vin.model}|${vin.year}`,
+          instance_count: 0,
+          vin_instances: []
+        });
+      }
+
+      // Add VIN to this vehicle's instances
+      const vehicle = vehicleMap.get(vehicleKey);
+      vehicle.vin_instances.push(vin);
+      vehicle.instance_count = vehicle.vin_instances.length;
+    });
+
+    // Convert map to array and sort by manufacturer, model, year
+    return Array.from(vehicleMap.values()).sort((a, b) => {
+      if (a.manufacturer !== b.manufacturer) {
+        return a.manufacturer.localeCompare(b.manufacturer);
+      }
+      if (a.model !== b.model) {
+        return a.model.localeCompare(b.model);
+      }
+      return b.year - a.year; // Newest first
     });
   }
 }

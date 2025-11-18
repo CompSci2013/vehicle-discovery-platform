@@ -154,10 +154,41 @@ export interface Manufacturer {
 /**
  * MANUFACTURER-MODEL COUNTS RESPONSE
  *
- * Response from the manufacturer-model counts endpoint
+ * Response from the manufacturer-model combinations endpoint
+ * (Real API response format with pagination)
+ *
+ * NOTE: The real API returns "data" instead of "results"
  */
 export interface ManufacturerModelCountsResponse {
-  manufacturers: Manufacturer[];
+  /**
+   * MANUFACTURER DATA
+   * Array of manufacturers with their models
+   */
+  data: Manufacturer[];
+
+  /**
+   * TOTAL COUNT
+   * Total number of manufacturers
+   */
+  total: number;
+
+  /**
+   * CURRENT PAGE
+   * The page number returned (1-indexed)
+   */
+  page: number;
+
+  /**
+   * PAGE SIZE
+   * Number of items per page
+   */
+  size: number;
+
+  /**
+   * TOTAL PAGES
+   * Total number of pages available
+   */
+  totalPages: number;
 }
 
 /**

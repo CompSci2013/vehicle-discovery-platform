@@ -22,6 +22,7 @@ import {
   VehicleSearchResponse,
   ManufacturerModelCountsResponse,
   Manufacturer,
+  Model,
   VinInstancesResponse,
   VinInstance
 } from './vehicle-api.types';
@@ -35,7 +36,7 @@ import {
  */
 export const VEHICLE_API_CONFIG: ApiConfig = {
   id: 'vehicles',
-  basePath: '/search', // All vehicle endpoints are under /search
+  basePath: '/v1', // All vehicle endpoints are under /v1 (autos backend)
 
   endpoints: {
     /**
@@ -44,26 +45,26 @@ export const VEHICLE_API_CONFIG: ApiConfig = {
      * Fetches the complete list of manufacturers and their models with counts.
      * Used to populate picker components.
      *
-     * Endpoint: GET /api/search/manufacturer-model-counts
+     * Endpoint: GET /api/v1/manufacturer-model-combinations
      */
     manufacturerModelCounts: {
       id: 'manufacturerModelCounts',
-      url: '/manufacturer-model-counts',
+      url: '/manufacturer-model-combinations',
       method: 'GET',
 
       // Transform response: extract and sort manufacturers
       transformResponse: (response: ManufacturerModelCountsResponse): Manufacturer[] => {
-        const manufacturers = response.manufacturers;
+        const manufacturers = response.data;
 
         // Sort manufacturers alphabetically
-        const sortedManufacturers = manufacturers.sort((a, b) =>
+        const sortedManufacturers = manufacturers.sort((a: Manufacturer, b: Manufacturer) =>
           a.manufacturer.localeCompare(b.manufacturer)
         );
 
         // Sort each manufacturer's models alphabetically
-        return sortedManufacturers.map(m => ({
+        return sortedManufacturers.map((m: Manufacturer) => ({
           ...m,
-          models: m.models.sort((a, b) => a.model.localeCompare(b.model))
+          models: m.models.sort((a: Model, b: Model) => a.model.localeCompare(b.model))
         }));
       }
     },
@@ -105,31 +106,29 @@ export const VEHICLE_API_CONFIG: ApiConfig = {
     /**
      * VIN INSTANCES ENDPOINT
      *
-     * Fetches generated VIN instances for a specific vehicle.
-     * VINs are generated on-demand, not stored in database.
+     * Fetches real VIN instances from Elasticsearch.
+     * Filters by manufacturer and model.
      *
-     * Endpoint: GET /api/search/vehicle-instances/:vehicleId
-     *
-     * NOTE: This endpoint requires building the URL with the vehicleId.
-     * You'll need to use a custom method or pass the vehicleId in the request.
+     * Endpoint: GET /api/v1/vins
      */
     vinInstances: {
       id: 'vinInstances',
-      url: '/vehicle-instances', // Base URL, vehicleId will be appended
+      url: '/vins',
       method: 'GET',
 
       // Build params for VIN instances request
-      buildParams: (request: { vehicleId: string; count?: number }): HttpParams => {
+      buildParams: (request: { manufacturer?: string; model?: string; limit?: number; page?: number }): HttpParams => {
         let params = new HttpParams();
-        if (request.count) {
-          params = params.set('count', request.count.toString());
-        }
+        if (request.manufacturer) params = params.set('manufacturer', request.manufacturer);
+        if (request.model) params = params.set('model', request.model);
+        if (request.limit) params = params.set('limit', request.limit.toString());
+        if (request.page) params = params.set('page', request.page.toString());
         return params;
       },
 
       // Transform response: extract instances array
-      transformResponse: (response: VinInstancesResponse): VinInstance[] => {
-        return response.instances;
+      transformResponse: (response: any): any[] => {
+        return response.instances || [];
       }
     }
   }
@@ -150,7 +149,7 @@ export const VEHICLE_API_CONFIG: ApiConfig = {
  */
 export function getVinInstancesEndpointConfig(vehicleId: string) {
   return {
-    ...VEHICLE_API_CONFIG.endpoints.vinInstances,
+    ...VEHICLE_API_CONFIG.endpoints['vinInstances'],
     url: `/vehicle-instances/${vehicleId}`
   };
 }
